@@ -245,7 +245,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode2 = __toESM(require("vscode"));
+var import_vscode5 = __toESM(require("vscode"));
 
 // src/indexer.js
 var import_fs2 = require("fs");
@@ -6668,7 +6668,7 @@ async function main() {
     });
   }
   initializeFully();
-  watcher = import_vscode.workspace.createFileSystemWatcher(pattern);
+  watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
   watcher.onDidChange((file) => {
     revalidateFile(file.fsPath);
     console.log("refreshed:", elementMap);
@@ -6676,7 +6676,7 @@ async function main() {
   watcher.onDidCreate((file) => {
     revalidateFile(file.fsPath);
   });
-  watcher.onDidDelete(async (file) => {
+  watcher.onDidDelete((file) => {
     elementMap = /* @__PURE__ */ new Map();
     totalElementsAutoCompletions = [];
     initializeFully();
@@ -6768,84 +6768,97 @@ var JSONUIElement = class {
   }
 };
 
+// src/providers/referenceCompletions.js
+var import_vscode2 = require("vscode");
+var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionItemProvider("json", {
+  provideCompletionItems(document, position) {
+    const textBeforeCursor = document.getText(new import_vscode2.Range(new import_vscode2.Position(position.line, 0), position));
+    const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
+    if (atSymbolIndex === -1) return [];
+    const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
+    const filteredSuggestions = totalElementsAutoCompletions.filter(
+      (x) => `${x.namespace}.${x.elementName}`.includes(word)
+    );
+    return filteredSuggestions.map((x) => ({
+      label: `@${x.namespace}.${x.elementName}`,
+      kind: import_vscode2.CompletionItemKind.Variable,
+      insertText: `@${x.namespace}.${x.elementName}`,
+      range: new import_vscode2.Range(
+        new import_vscode2.Position(position.line, atSymbolIndex),
+        position
+      )
+    }));
+  }
+}, "@");
+
+// src/providers/referenceDeffenitions.js
+var import_vscode3 = require("vscode");
+var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionProvider("json", {
+  provideDefinition(document, position) {
+    const text = document.getText();
+    const jsonKeyPattern = /"([\w-]+)@([\w-]+).([\w-]+)"\s*:/g;
+    const match2 = jsonKeyPattern.exec(text);
+    if (match2 === null) return;
+    const key = `${match2[1]}@${match2[2]}.${match2[3]}`;
+    const jsonElemet = getElementByKey(key);
+    const meta = jsonElemet?.metadata;
+    if (!meta) return;
+    const { filePath } = meta;
+    if (!filePath) return;
+    const startIndex = match2.index;
+    const startPosition = document.positionAt(startIndex);
+    return new import_vscode3.Location(import_vscode3.Uri.file(filePath), startPosition);
+  }
+});
+
+// src/providers/variableCompletions.js
+var import_vscode4 = require("vscode");
+var VariableCompletionProvider = import_vscode4.languages.registerCompletionItemProvider("json", {
+  provideCompletionItems(document, position) {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
+    function findPatternUpwards(text2, offset2, pattern) {
+      const slicedText = text2.slice(0, offset2);
+      let match2;
+      let index2 = slicedText.length;
+      while (index2 > 0) {
+        const result = slicedText.slice(0, index2).match(pattern);
+        if (result) {
+          match2 = result[1];
+          break;
+        }
+        index2 = slicedText.lastIndexOf("\n", index2 - 1);
+      }
+      return match2;
+    }
+    const anyKeyString = findPatternUpwards(text, offset, searchPattern);
+    if (!anyKeyString) return;
+    const keyData = getElementByKey(anyKeyString);
+    if (!keyData) return;
+    return keyData.metadata?.variables.map((x) => ({
+      sortText: "!",
+      label: x,
+      kind: import_vscode4.CompletionItemKind.Variable
+    }));
+  }
+});
+
+// src/providerIndex.js
+var providers = [
+  ReferenceCompletionProvider,
+  VariableCompletionProvider,
+  ReferenceDeffenitionProvider
+];
+function registerProviders(context) {
+  context.subscriptions.push(...providers);
+}
+
 // src/extension.js
 function activate(context) {
-  context.subscriptions.push(
-    import_vscode2.languages.registerCompletionItemProvider("json", {
-      // @ts-ignore
-      provideCompletionItems(document, position) {
-        const textBeforeCursor = document.getText(new import_vscode2.default.Range(new import_vscode2.default.Position(position.line, 0), position));
-        const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
-        if (atSymbolIndex === -1) return [];
-        const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
-        const filteredSuggestions = totalElementsAutoCompletions.filter(
-          (x) => `${x.namespace}.${x.elementName}`.includes(word)
-        );
-        return filteredSuggestions.map((x) => ({
-          label: `@${x.namespace}.${x.elementName}`,
-          kind: import_vscode2.default.CompletionItemKind.Variable,
-          insertText: `@${x.namespace}.${x.elementName}`,
-          range: new import_vscode2.default.Range(
-            new import_vscode2.default.Position(position.line, atSymbolIndex),
-            position
-          )
-        }));
-      }
-    }, "@")
-  );
-  context.subscriptions.push(
-    import_vscode2.languages.registerCompletionItemProvider("json", {
-      provideCompletionItems(document, position) {
-        const text = document.getText();
-        const offset = document.offsetAt(position);
-        const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
-        function findPatternUpwards(text2, offset2, pattern) {
-          const slicedText = text2.slice(0, offset2);
-          let match2;
-          let index2 = slicedText.length;
-          while (index2 > 0) {
-            const result = slicedText.slice(0, index2).match(pattern);
-            if (result) {
-              match2 = result[1];
-              break;
-            }
-            index2 = slicedText.lastIndexOf("\n", index2 - 1);
-          }
-          return match2;
-        }
-        const anyKeyString = findPatternUpwards(text, offset, searchPattern);
-        if (!anyKeyString) return;
-        const keyData = getElementByKey(anyKeyString);
-        if (!keyData) return;
-        return keyData.metadata?.variables.map((x) => ({
-          sortText: "!",
-          label: x,
-          kind: import_vscode2.CompletionItemKind.Variable,
-          insertText: x
-        }));
-      }
-    }, "$")
-  );
-  context.subscriptions.push(
-    import_vscode2.languages.registerDefinitionProvider("json", {
-      provideDefinition(document, position) {
-        const text = document.getText();
-        const jsonKeyPattern = /"([\w-]+)@([\w-]+).([\w-]+)"\s*:/g;
-        const match2 = jsonKeyPattern.exec(text);
-        if (match2 === null) return;
-        const key = `${match2[1]}@${match2[2]}.${match2[3]}`;
-        const jsonElemet = getElementByKey(key);
-        const meta = jsonElemet?.metadata;
-        if (!meta) return;
-        const { filePath } = meta;
-        if (!filePath) return;
-        const startIndex = match2.index;
-        const startPosition = document.positionAt(startIndex);
-        console.log(filePath);
-        return new import_vscode2.Location(import_vscode2.Uri.file(filePath), startPosition);
-      }
-    })
-  );
+  const config = import_vscode5.default.workspace.getConfiguration("editor");
+  config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?");
+  registerProviders(context);
 }
 function deactivate() {
   dispose();

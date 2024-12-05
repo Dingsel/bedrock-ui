@@ -70,16 +70,18 @@ async function main() {
 
     initializeFully()
 
-    //FIX PLS
-    watcher = workspace.createFileSystemWatcher(pattern)
+    watcher = workspace.createFileSystemWatcher("**/ui/**")
+
     watcher.onDidChange((file) => {
         revalidateFile(file.fsPath)
         console.log("refreshed:", elementMap)
     })
+
     watcher.onDidCreate((file) => {
         revalidateFile(file.fsPath)
     })
-    watcher.onDidDelete(async (file) => {
+
+    watcher.onDidDelete((file) => {
         elementMap = new Map()
         totalElementsAutoCompletions = []
 
