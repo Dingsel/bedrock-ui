@@ -1,0 +1,61 @@
+{
+    "name": "bedrock-ui",
+    "displayName": "bedrock-ui",
+    "description": "",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.95.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:json"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "jsonValidation": [
+            {
+                "fileMatch": [
+                    "ui/**/*.json",
+                    "!_ui_defs.json",
+                    "!_global_variables.json"
+                ],
+                "url": "https://kalmemarq.github.io/Bugrock-JSON-UI-Schemas/ui.schema.json"
+            }
+        ],
+        "languages": [
+            {
+                "id": "json",
+                "aliases": [
+                    "JSON",
+                    "json"
+                ],
+                "extensions": [
+                    ".json"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ]
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "pretest": "npm run lint",
+        "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node",
+        "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node --watch",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.9",
+        "@types/node": "20.x",
+        "@types/vscode": "^1.95.0",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1",
+        "eslint": "^9.13.0"
+    },
+    "dependencies": {
+        "esbuild": "^0.24.0",
+        "glob": "^11.0.0"
+    }
+}
+

@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "ES2023",
+        "module": "ES2022",
+        "moduleResolution": "Node",
+        "noEmit": true,
+        "allowJs": true,
+        "checkJs": true,
+        "lib": ["ES2023", "DOM"],
+        "downlevelIteration": true,
+        "strict": true,
+        "allowSyntheticDefaultImports": true
+    },
+    "exclude": ["./dist/**/*", "node_modules"]
+}
+
