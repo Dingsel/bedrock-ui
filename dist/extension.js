@@ -6624,6 +6624,7 @@ var glob = Object.assign(glob_, {
 glob.glob = glob;
 
 // src/indexer.js
+var import_path = require("path");
 var import_vscode = require("vscode");
 var elementMap = /* @__PURE__ */ new Map();
 var totalElementsAutoCompletions = [];
@@ -6646,7 +6647,8 @@ function revalidateFile(filePath) {
     if (!namespace || typeof namespace !== "string") return;
     Object.keys(json).forEach((key) => {
       if (key === "namespace") return;
-      index(getKeyInfomation(key), namespace, json[key], { filePath });
+      const variables = Object.keys(json[key]).filter((x) => x.startsWith("$")).map((x) => x.split("|", 2)[0]);
+      index(getKeyInfomation(key), namespace, json[key], { filePath, variables });
     });
   } catch (error) {
     console.error(`Error parsing JSON file: ${withoutComments}`, error);
@@ -6654,21 +6656,22 @@ function revalidateFile(filePath) {
 }
 var watcher;
 async function main() {
-  const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
-  if (!workspacePath) return console.warn("Not in a workspace");
-  const pattern = `${workspacePath}/**/ui/**/*.+(json)`;
+  const pattern = `./**/ui/**/*.+(json)`;
   async function initializeFully() {
-    for await (const file of glob.globIterate(pattern, { nodir: true })) {
-      revalidateFile(file);
+    const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspacePath) return console.warn("Not in a workspace");
+    for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
+      revalidateFile((0, import_path.join)(workspacePath, file));
     }
     elementMap.forEach((element, key) => {
-      totalElementsAutoCompletions.push(element.toString());
+      totalElementsAutoCompletions.push(element);
     });
   }
   initializeFully();
   watcher = import_vscode.workspace.createFileSystemWatcher(pattern);
   watcher.onDidChange((file) => {
     revalidateFile(file.fsPath);
+    console.log("refreshed:", elementMap);
   });
   watcher.onDidCreate((file) => {
     revalidateFile(file.fsPath);
@@ -6768,6 +6771,62 @@ var JSONUIElement = class {
 // src/extension.js
 function activate(context) {
   context.subscriptions.push(
+    import_vscode2.languages.registerCompletionItemProvider("json", {
+      // @ts-ignore
+      provideCompletionItems(document, position) {
+        const textBeforeCursor = document.getText(new import_vscode2.default.Range(new import_vscode2.default.Position(position.line, 0), position));
+        const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
+        if (atSymbolIndex === -1) return [];
+        const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
+        const filteredSuggestions = totalElementsAutoCompletions.filter(
+          (x) => `${x.namespace}.${x.elementName}`.includes(word)
+        );
+        return filteredSuggestions.map((x) => ({
+          label: `@${x.namespace}.${x.elementName}`,
+          kind: import_vscode2.default.CompletionItemKind.Variable,
+          insertText: `@${x.namespace}.${x.elementName}`,
+          range: new import_vscode2.default.Range(
+            new import_vscode2.default.Position(position.line, atSymbolIndex),
+            position
+          )
+        }));
+      }
+    }, "@")
+  );
+  context.subscriptions.push(
+    import_vscode2.languages.registerCompletionItemProvider("json", {
+      provideCompletionItems(document, position) {
+        const text = document.getText();
+        const offset = document.offsetAt(position);
+        const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
+        function findPatternUpwards(text2, offset2, pattern) {
+          const slicedText = text2.slice(0, offset2);
+          let match2;
+          let index2 = slicedText.length;
+          while (index2 > 0) {
+            const result = slicedText.slice(0, index2).match(pattern);
+            if (result) {
+              match2 = result[1];
+              break;
+            }
+            index2 = slicedText.lastIndexOf("\n", index2 - 1);
+          }
+          return match2;
+        }
+        const anyKeyString = findPatternUpwards(text, offset, searchPattern);
+        if (!anyKeyString) return;
+        const keyData = getElementByKey(anyKeyString);
+        if (!keyData) return;
+        return keyData.metadata?.variables.map((x) => ({
+          sortText: "!",
+          label: x,
+          kind: import_vscode2.CompletionItemKind.Variable,
+          insertText: x
+        }));
+      }
+    }, "$")
+  );
+  context.subscriptions.push(
     import_vscode2.languages.registerDefinitionProvider("json", {
       provideDefinition(document, position) {
         const text = document.getText();
@@ -6782,6 +6841,7 @@ function activate(context) {
         if (!filePath) return;
         const startIndex = match2.index;
         const startPosition = document.positionAt(startIndex);
+        console.log(filePath);
         return new import_vscode2.Location(import_vscode2.Uri.file(filePath), startPosition);
       }
     })

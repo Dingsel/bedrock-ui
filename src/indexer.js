@@ -1,12 +1,13 @@
 import { readFileSync } from "fs";
 import { glob } from "glob";
+import { join } from "path";
 import { workspace } from "vscode";
 
 /**@type {Map<string, JSONUIElement>} */
 let elementMap = new Map()
 
 /**
- * @type {string[]}
+ * @type {JSONUIElement[]}
  */
 export let totalElementsAutoCompletions = []
 
@@ -38,8 +39,9 @@ function revalidateFile(filePath) {
 
         Object.keys(json).forEach(key => {
             if (key === "namespace") return;
+            const variables = Object.keys(json[key]).filter(x => x.startsWith("$")).map(x => x.split("|", 2)[0])
 
-            index(getKeyInfomation(key), namespace, json[key], { filePath });
+            index(getKeyInfomation(key), namespace, json[key], { filePath, variables });
         });
     } catch (error) {
         console.error(`Error parsing JSON file: ${withoutComments}`, error);
@@ -52,25 +54,27 @@ function revalidateFile(filePath) {
 let watcher;
 
 async function main() {
-    const workspacePath = workspace?.workspaceFolders?.[0]?.uri.fsPath
-    if (!workspacePath) return console.warn("Not in a workspace")
-    const pattern = `${workspacePath}/**/ui/**/*.+(json)`
+    const pattern = `./**/ui/**/*.+(json)`
 
     async function initializeFully() {
-        for await (const file of glob.globIterate(pattern, { nodir: true })) {
-            revalidateFile(file)
+        const workspacePath = workspace?.workspaceFolders?.[0]?.uri.fsPath
+        if (!workspacePath) return console.warn("Not in a workspace")
+        for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
+            revalidateFile(join(workspacePath, file))
         }
 
         elementMap.forEach((element, key) => {
-            totalElementsAutoCompletions.push(element.toString())
+            totalElementsAutoCompletions.push(element)
         })
     }
 
     initializeFully()
 
+    //FIX PLS
     watcher = workspace.createFileSystemWatcher(pattern)
     watcher.onDidChange((file) => {
         revalidateFile(file.fsPath)
+        console.log("refreshed:", elementMap)
     })
     watcher.onDidCreate((file) => {
         revalidateFile(file.fsPath)
