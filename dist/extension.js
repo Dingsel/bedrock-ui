@@ -6700,7 +6700,7 @@ function index(keyInfo, namespace, jsonElement, additionalData) {
     element.setMetaData(additionalData);
   }
   elementMap.set(element.toString(), element);
-  jsonElement.controlls?.forEach((controllElement) => {
+  jsonElement.controls?.forEach((controllElement) => {
     const name = Object.keys(controllElement)[0];
     if (!name) return;
     index(getKeyInfomation(name), namespace, controllElement[name]);
@@ -6756,6 +6756,9 @@ var JSONUIElement = class {
    * @param {JSONUIElement} reference
    */
   setReference(reference) {
+    if (this.reference) {
+      console.warn(`WARNING: Element with duplicate name: INCOMMING ${reference.toString()} <-> AGAINST ${this.reference.toString()}`);
+    }
     this.reference = reference;
   }
   /**
@@ -6897,7 +6900,6 @@ function useColours() {
     }
     if (editor) {
       editor.setDecorations(decorationType, ranges);
-      import_vscode5.languages.setTextDocumentLanguage(editor.document, "jsonc");
     }
   }
 }

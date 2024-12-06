@@ -14,5 +14,6 @@ Trying to autocomplete variables sometimes makes the suggestion appear at the bo
 
 ## TODO
 Error reporting
+referencedBy on nested elements
 
 **Enjoy!**

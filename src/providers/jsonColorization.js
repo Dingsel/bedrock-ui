@@ -43,7 +43,6 @@ export function useColours() {
 
         if (editor) {
             editor.setDecorations(decorationType, ranges);
-            languages.setTextDocumentLanguage(editor.document, 'jsonc')
         }
     }
 }

@@ -98,7 +98,7 @@ main()
 
 
 /**
- * @param {{controlls?: {[key: string]: any;}[];}} jsonElement
+ * @param {{controls?: {[key: string]: any;}[];}} jsonElement
  * @param {string} namespace
  * @param {ReturnType<typeof getKeyInfomation>} keyInfo
  * @param {import("./types").JSONElementMeta | undefined} [additionalData]
@@ -122,7 +122,7 @@ function index(keyInfo, namespace, jsonElement, additionalData) {
 
     elementMap.set(element.toString(), element)
 
-    jsonElement.controlls?.forEach(controllElement => {
+    jsonElement.controls?.forEach(controllElement => {
         const name = Object.keys(controllElement)[0]
         if (!name) return
 
@@ -192,6 +192,9 @@ class JSONUIElement {
      * @param {JSONUIElement} reference
      */
     setReference(reference) {
+        if (this.reference) {
+            console.warn(`WARNING: Element with duplicate name: INCOMMING ${reference.toString()} <-> AGAINST ${this.reference.toString()}`)
+        }
         this.reference = reference;
     }
     /**
