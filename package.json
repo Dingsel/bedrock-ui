@@ -34,8 +34,7 @@
                 "extensions": [
                     ".json",
                     ".jsonc"
-                ],
-                "configuration": "./language-configuration.json"
+                ]
             }
         ]
     },
@@ -44,7 +43,9 @@
         "pretest": "npm run lint",
         "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node",
         "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node --watch",
-        "test": "vscode-test"
+        "test": "vscode-test",
+        "package": "vsce package",
+        "publish": "vsce publish"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.9",
@@ -55,6 +56,7 @@
         "eslint": "^9.13.0"
     },
     "dependencies": {
+        "@vscode/vsce": "^3.2.1",
         "esbuild": "^0.24.0",
         "glob": "^11.0.0"
     }

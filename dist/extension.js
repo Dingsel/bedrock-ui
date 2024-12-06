@@ -246,7 +246,7 @@ __export(extension_exports, {
   docInfo: () => docInfo
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode6 = __toESM(require("vscode"));
+var import_vscode7 = __toESM(require("vscode"));
 
 // src/indexer.js
 var import_fs2 = require("fs");
@@ -6866,48 +6866,84 @@ function registerProviders(context) {
 }
 
 // src/providers/jsonColorization.js
+var import_vscode6 = require("vscode");
+
+// src/global.js
 var import_vscode5 = require("vscode");
+var namespaceDecoration = import_vscode5.window.createTextEditorDecorationType({
+  color: "#44C9B0"
+});
+var elementDecoration = import_vscode5.window.createTextEditorDecorationType({
+  color: "#569CD6"
+});
+var variableDecoration = import_vscode5.window.createTextEditorDecorationType({
+  color: "#DCDC9D"
+});
+
+// src/providers/jsonColorization.js
 function useColours() {
-  const decorationType = import_vscode5.window.createTextEditorDecorationType({
-    color: "#44C9B0"
-  });
-  import_vscode5.workspace.onDidOpenTextDocument((document) => {
-    if (document.languageId === "json") {
-      colorizeJsonKey(document);
+  import_vscode6.workspace.onDidOpenTextDocument(() => {
+    if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId === "json") {
+      colorizeJson(import_vscode6.window.activeTextEditor);
     }
   });
-  import_vscode5.window.onDidChangeActiveTextEditor((editor) => {
+  import_vscode6.window.onDidChangeActiveTextEditor((editor) => {
     if (editor && editor.document.languageId === "json") {
-      colorizeJsonKey(editor.document);
+      colorizeJson(editor);
     }
   });
-  if (import_vscode5.window.activeTextEditor && import_vscode5.window.activeTextEditor.document.languageId === "json") {
-    colorizeJsonKey(import_vscode5.window.activeTextEditor.document);
+  if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId === "json") {
+    colorizeJson(import_vscode6.window.activeTextEditor);
   }
-  function colorizeJsonKey(document) {
-    const editor = import_vscode5.window.activeTextEditor;
-    const regex = /"namespace"\s*:\s*("[^"]+")|(?!")@([^\s".]+)/g;
+  function colorizeJson(editor) {
+    const document = editor.document;
     const text = document.getText();
-    let match2;
-    const ranges = [];
-    while ((match2 = regex.exec(text)) !== null) {
-      const matchColour = match2[1] || match2[2];
-      if (matchColour) {
-        const start = document.positionAt(match2.index + match2[0].indexOf(matchColour));
-        const end = document.positionAt(match2.index + match2[0].indexOf(matchColour) + matchColour.length);
-        ranges.push(new import_vscode5.Range(start, end));
+    const syntaxes = [
+      {
+        regex: /(?<=)@[^.\s]+(?=\.)/g,
+        decoration: namespaceDecoration
+      },
+      {
+        regex: /(?<=["\b])(\w+)(?=@|\s*":\s*\{)/g,
+        decoration: elementDecoration
+      },
+      {
+        regex: /(?<=\.)\w+(?=\":)/g,
+        decoration: elementDecoration
+      },
+      {
+        regex: /(?<=\"namespace\"\s*:\s*)(\"\w+")/g,
+        decoration: namespaceDecoration
+      },
+      {
+        regex: /(?<=["\b])(\$[0-9a-zA-Z_-|]+)/g,
+        decoration: variableDecoration
       }
-    }
-    if (editor) {
-      editor.setDecorations(decorationType, ranges);
-    }
+    ];
+    const matches = {};
+    syntaxes.forEach(({ regex, decoration }) => {
+      let match2;
+      while ((match2 = regex.exec(text)) !== null) {
+        const m = match2[2] || match2[1] || match2[0];
+        const startPos = document.positionAt(regex.lastIndex - m.length);
+        const endPos = document.positionAt(regex.lastIndex);
+        matches[decoration.key] ??= [];
+        matches[decoration.key].push({
+          range: new import_vscode6.Range(startPos, endPos),
+          decoration
+        });
+      }
+    });
+    Object.entries(matches).forEach(([key, arr]) => {
+      editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
+    });
   }
 }
 
 // src/extension.js
 var docInfo = "json";
 function activate(context) {
-  const config = import_vscode6.default.workspace.getConfiguration("editor");
+  const config = import_vscode7.default.workspace.getConfiguration("editor");
   config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?");
   useColours();
   registerProviders(context);

@@ -1,48 +1,74 @@
-import { languages, Range, window, workspace } from "vscode";
+import { Position, Range, window, workspace } from "vscode";
+import { elementDecoration, namespaceDecoration, variableDecoration } from "../global";
 
 export function useColours() {
-    const decorationType = window.createTextEditorDecorationType({
-        color: '#44C9B0',
-    });
-
-    workspace.onDidOpenTextDocument((document) => {
-        if (document.languageId === 'json') {
-            colorizeJsonKey(document);
+    workspace.onDidOpenTextDocument(() => {
+        if (window.activeTextEditor && window.activeTextEditor.document.languageId === 'json') {
+            colorizeJson(window.activeTextEditor);
         }
     });
 
     window.onDidChangeActiveTextEditor((editor) => {
         if (editor && editor.document.languageId === 'json') {
-            colorizeJsonKey(editor.document);
+            colorizeJson(editor);
         }
     });
 
     if (window.activeTextEditor && window.activeTextEditor.document.languageId === 'json') {
-        colorizeJsonKey(window.activeTextEditor.document);
+        colorizeJson(window.activeTextEditor);
     }
 
     /**
-     * @param {import("vscode").TextDocument} document
+     * @param {import("vscode").TextEditor} editor
      */
-    function colorizeJsonKey(document) {
-        const editor = window.activeTextEditor;
-        const regex = /"namespace"\s*:\s*("[^"]+")|(?!")@([^\s".]+)/g;
+    function colorizeJson(editor) {
+        const document = editor.document;
         const text = document.getText();
 
-        let match;
-        const ranges = [];
+        const syntaxes = [
+            {
+                regex: /(?<=)@[^.\s]+(?=\.)/g,
+                decoration: namespaceDecoration
+            },
+            {
+                regex: /(?<=["\b])(\w+)(?=@|\s*":\s*\{)/g,
+                decoration: elementDecoration
+            },
+            {
+                regex: /(?<=\.)\w+(?=\":)/g,
+                decoration: elementDecoration
+            },
+            {
+                regex: /(?<=\"namespace\"\s*:\s*)(\"\w+")/g,
+                decoration: namespaceDecoration
+            },
+            {
+                regex: /(?<=["\b])(\$[0-9a-zA-Z_-|]+)/g,
+                decoration: variableDecoration
+            },
+        ];
 
-        while ((match = regex.exec(text)) !== null) {
-            const matchColour = match[1] || match[2]
-            if (matchColour) {
-                const start = document.positionAt(match.index + match[0].indexOf(matchColour));
-                const end = document.positionAt(match.index + match[0].indexOf(matchColour) + matchColour.length);
-                ranges.push(new Range(start, end));
+        /**@type {{[key : string]: {range: Range, decoration: import("vscode").TextEditorDecorationType}[]}}*/
+        const matches = {};
+        syntaxes.forEach(({ regex, decoration }) => {
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+                const m = match[2] || match[1] || match[0];
+
+                const startPos = document.positionAt(regex.lastIndex - m.length);
+                const endPos = document.positionAt(regex.lastIndex);
+
+                matches[decoration.key] ??= []
+
+                matches[decoration.key].push({
+                    range: new Range(startPos, endPos),
+                    decoration
+                });
             }
-        }
-
-        if (editor) {
-            editor.setDecorations(decorationType, ranges);
-        }
+        });
+        Object.entries(matches).forEach(([key, arr]) => {
+            editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
+        })
     }
 }
