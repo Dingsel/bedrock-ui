@@ -1,4 +1,4 @@
-import { CompletionItemKind, languages } from "vscode";
+import { CompletionItemKind, languages, Position, Range } from "vscode";
 import { getElementByKey } from "../indexer";
 
 export const VariableCompletionProvider = languages.registerCompletionItemProvider("json", {
@@ -31,14 +31,27 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
         }
 
         const anyKeyString = findPatternUpwards(text, offset, searchPattern);
+
         if (!anyKeyString) return;
         const keyData = getElementByKey(anyKeyString);
+
         if (!keyData) return;
 
+        const textBeforeCursor = document.getText(new Range(new Position(position.line, 0), position));
+        const dollarSignIndex = textBeforeCursor.lastIndexOf('$');
+        const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
+        const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
+
+        const range = dollarSignIndex >= 0
+            ? new Range(new Position(position.line, dollarSignIndex), position)
+            : new Range(position, position);
+
         return keyData.metadata?.variables.map((x) => ({
-            sortText: "!",
+            sortText: "!!!",
             label: x,
-            kind: CompletionItemKind.Variable
+            insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
+            kind: CompletionItemKind.Variable,
+            range
         }));
     }
-})
+}, "$")

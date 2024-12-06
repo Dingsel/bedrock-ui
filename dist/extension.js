@@ -242,10 +242,11 @@ var require_brace_expansion = __commonJS({
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
-  deactivate: () => deactivate
+  deactivate: () => deactivate,
+  docInfo: () => docInfo
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode5 = __toESM(require("vscode"));
+var import_vscode6 = __toESM(require("vscode"));
 
 // src/indexer.js
 var import_fs2 = require("fs");
@@ -6685,9 +6686,6 @@ async function main() {
 function dispose() {
   watcher?.dispose();
 }
-setTimeout(() => {
-  console.log(elementMap);
-}, 3e3);
 main();
 function index(keyInfo, namespace, jsonElement, additionalData) {
   const { elementName: sourceName, targetNamespace, targetReference } = keyInfo;
@@ -6793,20 +6791,23 @@ var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionIte
 
 // src/providers/referenceDeffenitions.js
 var import_vscode3 = require("vscode");
+var import_fs3 = require("fs");
 var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionProvider("json", {
   provideDefinition(document, position) {
-    const text = document.getText();
-    const jsonKeyPattern = /"([\w-]+)@([\w-]+).([\w-]+)"\s*:/g;
-    const match2 = jsonKeyPattern.exec(text);
+    const lineText = document.lineAt(position.line).text;
+    const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*:/;
+    const match2 = jsonKeyPattern.exec(lineText.trim());
     if (match2 === null) return;
     const key = `${match2[1]}@${match2[2]}.${match2[3]}`;
-    const jsonElemet = getElementByKey(key);
-    const meta = jsonElemet?.metadata;
+    const jsonElement = getElementByKey(key);
+    const meta = jsonElement?.metadata;
     if (!meta) return;
     const { filePath } = meta;
     if (!filePath) return;
-    const startIndex = match2.index;
-    const startPosition = document.positionAt(startIndex);
+    const fileLines = (0, import_fs3.readFileSync)(filePath).toString().split("\n");
+    const startLine = fileLines.findIndex((x) => x.includes(`"${jsonElement.elementName}`));
+    const startChar = fileLines.find((x) => x.includes(`"${jsonElement.elementName}`))?.indexOf('"') ?? 0;
+    const startPosition = new import_vscode3.Position(startLine !== -1 ? startLine : 0, startChar);
     return new import_vscode3.Location(import_vscode3.Uri.file(filePath), startPosition);
   }
 });
@@ -6836,13 +6837,20 @@ var VariableCompletionProvider = import_vscode4.languages.registerCompletionItem
     if (!anyKeyString) return;
     const keyData = getElementByKey(anyKeyString);
     if (!keyData) return;
+    const textBeforeCursor = document.getText(new import_vscode4.Range(new import_vscode4.Position(position.line, 0), position));
+    const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
+    const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
+    const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
+    const range = dollarSignIndex >= 0 ? new import_vscode4.Range(new import_vscode4.Position(position.line, dollarSignIndex), position) : new import_vscode4.Range(position, position);
     return keyData.metadata?.variables.map((x) => ({
-      sortText: "!",
+      sortText: "!!!",
       label: x,
-      kind: import_vscode4.CompletionItemKind.Variable
+      insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
+      kind: import_vscode4.CompletionItemKind.Variable,
+      range
     }));
   }
-});
+}, "$");
 
 // src/providerIndex.js
 var providers = [
@@ -6854,10 +6862,52 @@ function registerProviders(context) {
   context.subscriptions.push(...providers);
 }
 
+// src/providers/jsonColorization.js
+var import_vscode5 = require("vscode");
+function useColours() {
+  const decorationType = import_vscode5.window.createTextEditorDecorationType({
+    color: "#44C9B0"
+  });
+  import_vscode5.workspace.onDidOpenTextDocument((document) => {
+    if (document.languageId === "json") {
+      colorizeJsonKey(document);
+    }
+  });
+  import_vscode5.window.onDidChangeActiveTextEditor((editor) => {
+    if (editor && editor.document.languageId === "json") {
+      colorizeJsonKey(editor.document);
+    }
+  });
+  if (import_vscode5.window.activeTextEditor && import_vscode5.window.activeTextEditor.document.languageId === "json") {
+    colorizeJsonKey(import_vscode5.window.activeTextEditor.document);
+  }
+  function colorizeJsonKey(document) {
+    const editor = import_vscode5.window.activeTextEditor;
+    const regex = /"namespace"\s*:\s*("[^"]+")|(?!")@([^\s".]+)/g;
+    const text = document.getText();
+    let match2;
+    const ranges = [];
+    while ((match2 = regex.exec(text)) !== null) {
+      const matchColour = match2[1] || match2[2];
+      if (matchColour) {
+        const start = document.positionAt(match2.index + match2[0].indexOf(matchColour));
+        const end = document.positionAt(match2.index + match2[0].indexOf(matchColour) + matchColour.length);
+        ranges.push(new import_vscode5.Range(start, end));
+      }
+    }
+    if (editor) {
+      editor.setDecorations(decorationType, ranges);
+      import_vscode5.languages.setTextDocumentLanguage(editor.document, "jsonc");
+    }
+  }
+}
+
 // src/extension.js
+var docInfo = "json";
 function activate(context) {
-  const config = import_vscode5.default.workspace.getConfiguration("editor");
+  const config = import_vscode6.default.workspace.getConfiguration("editor");
   config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?");
+  useColours();
   registerProviders(context);
 }
 function deactivate() {
@@ -6866,5 +6916,6 @@ function deactivate() {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   activate,
-  deactivate
+  deactivate,
+  docInfo
 });

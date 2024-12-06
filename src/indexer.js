@@ -94,10 +94,6 @@ export function dispose() {
     watcher?.dispose()
 }
 
-setTimeout(() => {
-    console.log(elementMap)
-}, 3000)
-
 main()
 
 

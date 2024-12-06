@@ -32,7 +32,8 @@
                     "json"
                 ],
                 "extensions": [
-                    ".json"
+                    ".json",
+                    ".jsonc"
                 ],
                 "configuration": "./language-configuration.json"
             }
