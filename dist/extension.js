@@ -6874,7 +6874,7 @@ var namespaceDecoration = import_vscode5.window.createTextEditorDecorationType({
   color: "#44C9B0"
 });
 var elementDecoration = import_vscode5.window.createTextEditorDecorationType({
-  color: "#569CD6"
+  color: "#4FC1FF"
 });
 var variableDecoration = import_vscode5.window.createTextEditorDecorationType({
   color: "#DCDC9D"

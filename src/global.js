@@ -5,7 +5,7 @@ export const namespaceDecoration = window.createTextEditorDecorationType({
 });
 
 export const elementDecoration = window.createTextEditorDecorationType({
-    color: '#569CD6',
+    color: '#4FC1FF',
 });
 
 export const variableDecoration = window.createTextEditorDecorationType({
