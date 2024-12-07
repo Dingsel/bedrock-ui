@@ -1,7 +1,6 @@
 import { languages, Location, Position, Uri } from "vscode";
 import { readFileSync } from "fs";
 import { elementMap } from "../indexer/parseFile";
-import { getKeyInfomation } from "../indexer/utils";
 
 export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider("json", {
     provideDefinition(document, position) {

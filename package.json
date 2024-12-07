@@ -2,6 +2,10 @@
     "name": "bedrock-ui",
     "displayName": "bedrock-ui",
     "description": "",
+    "icon": "./UIX.png",
+    "repository": {
+        "url": "https://github.com/Dingsel/bedrock-ui"
+    },
     "version": "0.0.2",
     "engines": {
         "vscode": "^1.95.0"
