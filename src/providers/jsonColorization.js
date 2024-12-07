@@ -1,27 +1,28 @@
 import { Position, Range, window, workspace } from "vscode";
-import { elementDecoration, namespaceDecoration, variableDecoration } from "../global";
+import { bindingDecoration, elementDecoration, namespaceDecoration, variableDecoration } from "../global";
+import { isProbablyJSONUI } from "../indexer/utils";
 
 export function useColours() {
     workspace.onDidOpenTextDocument(() => {
-        if (window.activeTextEditor && window.activeTextEditor.document.languageId === 'json') {
+        if (window.activeTextEditor && window.activeTextEditor.document.languageId.includes('json')) {
             colorizeJson(window.activeTextEditor);
         }
     });
 
     window.onDidChangeActiveTextEditor((editor) => {
-        if (editor && editor.document.languageId === 'json') {
+        if (editor && editor.document.languageId.includes('json')) {
             colorizeJson(editor);
         }
     });
 
     workspace.onDidChangeTextDocument((event) => {
         const editor = window.activeTextEditor;
-        if (editor && editor.document === event.document && editor.document.languageId === 'json') {
+        if (editor && editor.document === event.document && editor.document.languageId.includes('json')) {
             colorizeJson(editor);
         }
     });
 
-    if (window.activeTextEditor && window.activeTextEditor.document.languageId === 'json') {
+    if (window.activeTextEditor && window.activeTextEditor.document.languageId.includes('json')) {
         colorizeJson(window.activeTextEditor);
     }
 
@@ -31,6 +32,8 @@ export function useColours() {
     function colorizeJson(editor) {
         const document = editor.document;
         const text = document.getText();
+
+        if (!isProbablyJSONUI(text)) return
 
         const syntaxes = [
             {
@@ -50,9 +53,13 @@ export function useColours() {
                 decoration: namespaceDecoration
             },
             {
-                regex: /(?<=["\b])(\$[0-9a-zA-Z_-|]+)/g,
+                regex: /(\$[\w_|]+)/g,
                 decoration: variableDecoration
             },
+            {
+                regex: /(#[\w_]+)/g,
+                decoration: bindingDecoration
+            }
         ];
 
         /**@type {{[key : string]: {range: Range, decoration: import("vscode").TextEditorDecorationType}[]}}*/

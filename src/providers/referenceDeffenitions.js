@@ -1,9 +1,12 @@
 import { languages, Location, Position, Uri } from "vscode";
 import { readFileSync } from "fs";
 import { elementMap } from "../indexer/parseFile";
+import { docInfo } from "../global";
+import { isProbablyJSONUI } from "../indexer/utils";
 
-export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider("json", {
+export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider(docInfo, {
     provideDefinition(document, position) {
+        if (!isProbablyJSONUI(document.getText())) return
         const lineText = document.lineAt(position.line).text;
 
         const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*:/;

@@ -9,7 +9,7 @@ import { glob } from "glob"
 export let totalElementsAutoCompletions = []
 
 export async function inizialize() {
-    const pattern = `./**/ui/**/*.+(json)`
+    const pattern = `ui/**/*.+(json)`
     const watcher = workspace.createFileSystemWatcher("**/ui/**")
 
     async function initializeFully() {

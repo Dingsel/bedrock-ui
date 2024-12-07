@@ -60,3 +60,11 @@ export function getVariableTree(element) {
 
     return arr
 }
+
+/**
+ * @param {string} fileContent
+ */
+//Do it better yourself smh
+export function isProbablyJSONUI(fileContent){
+    return fileContent.includes("\"namespace\":")
+}

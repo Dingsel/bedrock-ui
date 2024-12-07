@@ -1,9 +1,11 @@
 import { CompletionItemKind, languages, Position, Range } from "vscode";
 import { elementMap } from "../indexer/parseFile";
-import { getKeyInfomation, getVariableTree } from "../indexer/utils";
+import { getKeyInfomation, getVariableTree, isProbablyJSONUI } from "../indexer/utils";
+import { docInfo } from "../global";
 
-export const VariableCompletionProvider = languages.registerCompletionItemProvider("json", {
+export const VariableCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
+        if (!isProbablyJSONUI(document.getText())) return
         const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
 
         function findPatternUpwards() {

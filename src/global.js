@@ -11,3 +11,9 @@ export const elementDecoration = window.createTextEditorDecorationType({
 export const variableDecoration = window.createTextEditorDecorationType({
     color: '#DCDC9D',
 });
+
+export const bindingDecoration = window.createTextEditorDecorationType({
+    color: '#C66969',
+});
+
+export const docInfo = ["json", "jsonc", "json5"]

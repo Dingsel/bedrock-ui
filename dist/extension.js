@@ -242,14 +242,13 @@ var require_brace_expansion = __commonJS({
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
-  deactivate: () => deactivate,
-  docInfo: () => docInfo
+  deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
 var import_vscode7 = require("vscode");
 
 // src/providers/referenceCompletions.js
-var import_vscode2 = require("vscode");
+var import_vscode3 = require("vscode");
 
 // src/indexer/dataProvider.js
 var import_vscode = require("vscode");
@@ -299,6 +298,9 @@ function getVariableTree(element) {
     currentElement = element.parentElement;
   } while (currentElement);
   return arr;
+}
+function isProbablyJSONUI(fileContent) {
+  return fileContent.includes('"namespace":');
 }
 
 // src/indexer/parseFile.js
@@ -6769,7 +6771,7 @@ glob.glob = glob;
 // src/indexer/dataProvider.js
 var totalElementsAutoCompletions = [];
 async function inizialize() {
-  const pattern = `./**/ui/**/*.+(json)`;
+  const pattern = `ui/**/*.+(json)`;
   const watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
   async function initializeFully() {
     const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
@@ -6802,10 +6804,27 @@ async function inizialize() {
   };
 }
 
+// src/global.js
+var import_vscode2 = require("vscode");
+var namespaceDecoration = import_vscode2.window.createTextEditorDecorationType({
+  color: "#44C9B0"
+});
+var elementDecoration = import_vscode2.window.createTextEditorDecorationType({
+  color: "#4FC1FF"
+});
+var variableDecoration = import_vscode2.window.createTextEditorDecorationType({
+  color: "#DCDC9D"
+});
+var bindingDecoration = import_vscode2.window.createTextEditorDecorationType({
+  color: "#C66969"
+});
+var docInfo = ["json", "jsonc", "json5"];
+
 // src/providers/referenceCompletions.js
-var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionItemProvider("json", {
+var ReferenceCompletionProvider = import_vscode3.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
-    const textBeforeCursor = document.getText(new import_vscode2.Range(new import_vscode2.Position(position.line, 0), position));
+    if (!isProbablyJSONUI(document.getText())) return;
+    const textBeforeCursor = document.getText(new import_vscode3.Range(new import_vscode3.Position(position.line, 0), position));
     const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
     if (atSymbolIndex === -1) return [];
     const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
@@ -6815,18 +6834,19 @@ var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionIte
     return filteredSuggestions.map((x) => {
       return {
         label: `@${x.elementMeta.namespace}.${x.elementName}`,
-        kind: import_vscode2.CompletionItemKind.Variable,
+        kind: import_vscode3.CompletionItemKind.Variable,
         insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
-        range: new import_vscode2.Range(
-          new import_vscode2.Position(position.line, atSymbolIndex),
+        range: new import_vscode3.Range(
+          new import_vscode3.Position(position.line, atSymbolIndex),
           position
         )
       };
     });
   }
 }, "@");
-var ControlCompletionProvider = import_vscode2.languages.registerCompletionItemProvider("json", {
+var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
+    if (!isProbablyJSONUI(document.getText())) return;
     const textBeforeCursor = document.lineAt(position.line);
     const charIndex = textBeforeCursor.firstNonWhitespaceCharacterIndex;
     const symdex = textBeforeCursor.text[charIndex];
@@ -6835,10 +6855,10 @@ var ControlCompletionProvider = import_vscode2.languages.registerCompletionItemP
     return filteredSuggestions.map((x) => {
       return {
         label: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
-        kind: import_vscode2.CompletionItemKind.Variable,
+        kind: import_vscode3.CompletionItemKind.Variable,
         insertText: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
-        range: new import_vscode2.Range(
-          new import_vscode2.Position(position.line, charIndex + 1),
+        range: new import_vscode3.Range(
+          new import_vscode3.Position(position.line, charIndex + 1),
           position
         )
       };
@@ -6847,10 +6867,11 @@ var ControlCompletionProvider = import_vscode2.languages.registerCompletionItemP
 }, '"');
 
 // src/providers/referenceDeffenitions.js
-var import_vscode3 = require("vscode");
+var import_vscode4 = require("vscode");
 var import_fs3 = require("fs");
-var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionProvider("json", {
+var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
+    if (!isProbablyJSONUI(document.getText())) return;
     const lineText = document.lineAt(position.line).text;
     const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*:/;
     const match2 = jsonKeyPattern.exec(lineText.trim());
@@ -6863,15 +6884,16 @@ var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionPr
     const fileLines = (0, import_fs3.readFileSync)(filePath).toString().split("\n");
     const startLine = fileLines.findIndex((x) => x.includes(`"${jsonElement.elementName}`));
     const startChar = fileLines.find((x) => x.includes(`"${jsonElement.elementName}`))?.indexOf('"') ?? 0;
-    const startPosition = new import_vscode3.Position(startLine !== -1 ? startLine : 0, startChar);
-    return new import_vscode3.Location(import_vscode3.Uri.file(filePath), startPosition);
+    const startPosition = new import_vscode4.Position(startLine !== -1 ? startLine : 0, startChar);
+    return new import_vscode4.Location(import_vscode4.Uri.file(filePath), startPosition);
   }
 });
 
 // src/providers/variableCompletions.js
-var import_vscode4 = require("vscode");
-var VariableCompletionProvider = import_vscode4.languages.registerCompletionItemProvider("json", {
+var import_vscode5 = require("vscode");
+var VariableCompletionProvider = import_vscode5.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
+    if (!isProbablyJSONUI(document.getText())) return;
     const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
     function findPatternUpwards() {
       let match2 = null;
@@ -6890,16 +6912,16 @@ var VariableCompletionProvider = import_vscode4.languages.registerCompletionItem
     const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
     console.warn(anyKeyString);
     if (!element) return;
-    const textBeforeCursor = document.getText(new import_vscode4.Range(new import_vscode4.Position(position.line, 0), position));
+    const textBeforeCursor = document.getText(new import_vscode5.Range(new import_vscode5.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
-    const range = dollarSignIndex >= 0 ? new import_vscode4.Range(new import_vscode4.Position(position.line, dollarSignIndex), position) : new import_vscode4.Range(position, position);
+    const range = dollarSignIndex >= 0 ? new import_vscode5.Range(new import_vscode5.Position(position.line, dollarSignIndex), position) : new import_vscode5.Range(position, position);
     return getVariableTree(element).map((x) => ({
       sortText: "!!!",
       label: x,
       insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
-      kind: import_vscode4.CompletionItemKind.Variable,
+      kind: import_vscode5.CompletionItemKind.Variable,
       range
     }));
   }
@@ -6918,43 +6940,30 @@ function registerProviders(context) {
 
 // src/providers/jsonColorization.js
 var import_vscode6 = require("vscode");
-
-// src/global.js
-var import_vscode5 = require("vscode");
-var namespaceDecoration = import_vscode5.window.createTextEditorDecorationType({
-  color: "#44C9B0"
-});
-var elementDecoration = import_vscode5.window.createTextEditorDecorationType({
-  color: "#4FC1FF"
-});
-var variableDecoration = import_vscode5.window.createTextEditorDecorationType({
-  color: "#DCDC9D"
-});
-
-// src/providers/jsonColorization.js
 function useColours() {
   import_vscode6.workspace.onDidOpenTextDocument(() => {
-    if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId === "json") {
+    if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId.includes("json")) {
       colorizeJson(import_vscode6.window.activeTextEditor);
     }
   });
   import_vscode6.window.onDidChangeActiveTextEditor((editor) => {
-    if (editor && editor.document.languageId === "json") {
+    if (editor && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
   import_vscode6.workspace.onDidChangeTextDocument((event) => {
     const editor = import_vscode6.window.activeTextEditor;
-    if (editor && editor.document === event.document && editor.document.languageId === "json") {
+    if (editor && editor.document === event.document && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
-  if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId === "json") {
+  if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId.includes("json")) {
     colorizeJson(import_vscode6.window.activeTextEditor);
   }
   function colorizeJson(editor) {
     const document = editor.document;
     const text = document.getText();
+    if (!isProbablyJSONUI(text)) return;
     const syntaxes = [
       {
         regex: /(?<=)@[^.\s]+(?=\.)/g,
@@ -6973,8 +6982,12 @@ function useColours() {
         decoration: namespaceDecoration
       },
       {
-        regex: /(?<=["\b])(\$[0-9a-zA-Z_-|]+)/g,
+        regex: /(\$[\w_|]+)/g,
         decoration: variableDecoration
+      },
+      {
+        regex: /(#[\w_]+)/g,
+        decoration: bindingDecoration
       }
     ];
     const matches = {};
@@ -6998,19 +7011,17 @@ function useColours() {
 }
 
 // src/extension.js
-var docInfo = "json";
 function activate(context) {
   const config = import_vscode7.workspace.getConfiguration("editor");
-  config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?");
+  config.update("wordSeparators", "`~!@%^&*()-=+[{]}\\|;:'\",.<>/?");
   useColours();
-  registerProviders(context);
   inizialize();
+  registerProviders(context);
 }
 function deactivate() {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   activate,
-  deactivate,
-  docInfo
+  deactivate
 });

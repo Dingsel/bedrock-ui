@@ -6,7 +6,7 @@
     "repository": {
         "url": "https://github.com/Dingsel/bedrock-ui"
     },
-    "version": "0.0.2",
+    "version": "0.0.3",
     "engines": {
         "vscode": "^1.95.0"
     },
@@ -14,14 +14,15 @@
         "Other"
     ],
     "activationEvents": [
-        "onLanguage:json"
+        "onLanguage:json",
+        "onLanguage:jsonc"
     ],
     "main": "./dist/extension.js",
     "contributes": {
         "jsonValidation": [
             {
                 "fileMatch": [
-                    "ui/**/*.json",
+                    "*.{json,jsonc,json5}",
                     "!_ui_defs.json",
                     "!_global_variables.json"
                 ],
@@ -37,7 +38,8 @@
                 ],
                 "extensions": [
                     ".json",
-                    ".jsonc"
+                    ".jsonc",
+                    ".json5"
                 ]
             }
         ]
@@ -57,11 +59,11 @@
         "@types/vscode": "^1.95.0",
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
-        "eslint": "^9.13.0"
+        "@vscode/vsce": "^3.2.1",
+        "eslint": "^9.13.0",
+        "esbuild": "^0.24.0"
     },
     "dependencies": {
-        "@vscode/vsce": "^3.2.1",
-        "esbuild": "^0.24.0",
         "glob": "^11.0.0"
     }
 }

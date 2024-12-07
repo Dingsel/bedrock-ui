@@ -1,8 +1,11 @@
 import { CompletionItemKind, languages, Position, Range } from "vscode";
 import { totalElementsAutoCompletions } from "../indexer/dataProvider";
+import { docInfo } from "../global";
+import { isProbablyJSONUI } from "../indexer/utils";
 
-export const ReferenceCompletionProvider = languages.registerCompletionItemProvider("json", {
+export const ReferenceCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
+        if (!isProbablyJSONUI(document.getText())) return
         const textBeforeCursor = document.getText(new Range(new Position(position.line, 0), position));
         const atSymbolIndex = textBeforeCursor.lastIndexOf('@');
 
@@ -29,8 +32,9 @@ export const ReferenceCompletionProvider = languages.registerCompletionItemProvi
     }
 }, "@")
 
-export const ControlCompletionProvider = languages.registerCompletionItemProvider("json", {
+export const ControlCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
+        if (!isProbablyJSONUI(document.getText())) return
         const textBeforeCursor = document.lineAt(position.line);
         const charIndex = textBeforeCursor.firstNonWhitespaceCharacterIndex
 
