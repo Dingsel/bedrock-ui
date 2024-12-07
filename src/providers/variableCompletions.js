@@ -1,41 +1,33 @@
 import { CompletionItemKind, languages, Position, Range } from "vscode";
-import { getElementByKey } from "../indexer";
+import { elementMap } from "../indexer/parseFile";
+import { getKeyInfomation, getVariableTree } from "../indexer/utils";
 
 export const VariableCompletionProvider = languages.registerCompletionItemProvider("json", {
     provideCompletionItems(document, position) {
-        const text = document.getText();
-        const offset = document.offsetAt(position);
-
         const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
 
-        /**
-         * @param {string} text
-         * @param {number} offset
-         * @param {RegExp} pattern
-         */
-        function findPatternUpwards(text, offset, pattern) {
-            const slicedText = text.slice(0, offset);
-            let match;
-            let index = slicedText.length;
+        function findPatternUpwards() {
+            let match = null;
+            let lineOffset = 0;
 
-            while (index > 0) {
-                const result = slicedText.slice(0, index).match(pattern);
-                if (result) {
-                    match = result[1];
-                    break;
-                }
-                index = slicedText.lastIndexOf('\n', index - 1);
+            while (match === null) {
+                if (position.line - (lineOffset++) <= 0) break;
+                const lineText = document.lineAt(position.line - (lineOffset++)).text;
+                match = lineText.match(searchPattern)
             }
 
-            return match;
+            if (!match) return
+            return match[1]
         }
 
-        const anyKeyString = findPatternUpwards(text, offset, searchPattern);
+        const anyKeyString = findPatternUpwards();
 
         if (!anyKeyString) return;
-        const keyData = getElementByKey(anyKeyString);
+        const keyInfo = getKeyInfomation(anyKeyString)
+        const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
+        console.warn(anyKeyString)
 
-        if (!keyData) return;
+        if (!element) return;
 
         const textBeforeCursor = document.getText(new Range(new Position(position.line, 0), position));
         const dollarSignIndex = textBeforeCursor.lastIndexOf('$');
@@ -46,7 +38,8 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
             ? new Range(new Position(position.line, dollarSignIndex), position)
             : new Range(position, position);
 
-        return keyData.metadata?.variables.map((x) => ({
+
+        return getVariableTree(element).map((x) => ({
             sortText: "!!!",
             label: x,
             insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,

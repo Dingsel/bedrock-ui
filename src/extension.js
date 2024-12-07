@@ -1,20 +1,20 @@
-import vscode, { Uri, languages, Location, Position, CompletionItemKind, Range } from 'vscode';
-import { dispose, getElementByKey, totalElementsAutoCompletions } from './indexer.js';
+import { workspace } from 'vscode';
 import { registerProviders } from './providerIndex.js';
 import { useColours } from './providers/jsonColorization.js';
+import { inizialize } from './indexer/dataProvider.js';
 
 export const docInfo = "json"
 
 /**
- * @param {vscode.ExtensionContext} context
+ * @param {import('vscode').ExtensionContext} context
 */
 export function activate(context) {
-	const config = vscode.workspace.getConfiguration('editor');
+	const config = workspace.getConfiguration('editor');
 	config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?")
 
 	useColours()
 	registerProviders(context)
+
+	inizialize()
 }
-export function deactivate() {
-	dispose()
-}
+export function deactivate() { }

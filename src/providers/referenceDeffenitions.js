@@ -1,6 +1,7 @@
 import { languages, Location, Position, Uri } from "vscode";
-import { getElementByKey } from "../indexer";
 import { readFileSync } from "fs";
+import { elementMap } from "../indexer/parseFile";
+import { getKeyInfomation } from "../indexer/utils";
 
 export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider("json", {
     provideDefinition(document, position) {
@@ -10,10 +11,9 @@ export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider
         const match = jsonKeyPattern.exec(lineText.trim());
         if (match === null) return;
 
-        const key = `${match[1]}@${match[2]}.${match[3]}`;
+        const jsonElement = elementMap.get(`${[match[3]]}@${[match[2]]}`);
 
-        const jsonElement = getElementByKey(key);
-        const meta = jsonElement?.metadata;
+        const meta = jsonElement?.elementMeta;
         if (!meta) return;
 
         const { filePath } = meta;
@@ -24,7 +24,6 @@ export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider
         const startChar = fileLines.find(x => x.includes(`"${jsonElement.elementName}`))?.indexOf("\"") ?? 0
 
         const startPosition = new Position(startLine !== -1 ? startLine : 0, startChar);
-
 
         return new Location(Uri.file(filePath), startPosition);
     }

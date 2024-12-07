@@ -14,6 +14,13 @@ export function useColours() {
         }
     });
 
+    workspace.onDidChangeTextDocument((event) => {
+        const editor = window.activeTextEditor;
+        if (editor && editor.document === event.document && editor.document.languageId === 'json') {
+            colorizeJson(editor);
+        }
+    });
+
     if (window.activeTextEditor && window.activeTextEditor.document.languageId === 'json') {
         colorizeJson(window.activeTextEditor);
     }
@@ -31,7 +38,7 @@ export function useColours() {
                 decoration: namespaceDecoration
             },
             {
-                regex: /(?<=["\b])(\w+)(?=@|\s*":\s*\{)/g,
+                regex: /(?<=["\b])([\w\/]+)(?=@|\s*"\s*:\s*\{)/g,
                 decoration: elementDecoration
             },
             {

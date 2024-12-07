@@ -1,11 +1,12 @@
-import { ReferenceCompletionProvider } from "./providers/referenceCompletions";
+import { ControlCompletionProvider, ReferenceCompletionProvider } from "./providers/referenceCompletions";
 import { ReferenceDeffenitionProvider } from "./providers/referenceDeffenitions";
 import { VariableCompletionProvider } from "./providers/variableCompletions";
 
 const providers = [
     ReferenceCompletionProvider,
     VariableCompletionProvider,
-    ReferenceDeffenitionProvider
+    ReferenceDeffenitionProvider,
+    ControlCompletionProvider
 ]
 
 /**

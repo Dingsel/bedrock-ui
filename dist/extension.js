@@ -246,10 +246,152 @@ __export(extension_exports, {
   docInfo: () => docInfo
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode7 = __toESM(require("vscode"));
+var import_vscode7 = require("vscode");
 
-// src/indexer.js
-var import_fs2 = require("fs");
+// src/providers/referenceCompletions.js
+var import_vscode2 = require("vscode");
+
+// src/indexer/dataProvider.js
+var import_vscode = require("vscode");
+
+// src/indexer/parseFile.js
+var import_fs = require("fs");
+
+// src/indexer/utils.js
+function removeComments(string) {
+  const withoutComments = string.replace(/"(?:\\.|[^"\\])*"|\s*\/\/.*|\/\*[\s\S]*?\*\//g, (match2) => {
+    if (match2.startsWith('"')) {
+      return match2;
+    }
+    return "";
+  });
+  return withoutComments;
+}
+function getKeyInfomation(key) {
+  const [main, extra] = key.split("@", 2);
+  const elementName = main.trim();
+  if (!extra) return {
+    elementName,
+    targetNamespace: void 0,
+    targetReference: void 0
+  };
+  if (extra && !key.includes(".", key.indexOf("@"))) {
+    return {
+      elementName,
+      targetNamespace: void 0,
+      targetReference: extra
+    };
+  }
+  const [ns, ref] = extra.split(".", 2);
+  const targetNamespace = ns?.trim();
+  const targetReference = ref?.trim();
+  return {
+    elementName,
+    targetNamespace,
+    targetReference
+  };
+}
+function getVariableTree(element) {
+  let currentElement = element;
+  let arr = [];
+  do {
+    arr.push(...element.elementMeta.variables);
+    currentElement = element.parentElement;
+  } while (currentElement);
+  return arr;
+}
+
+// src/indexer/parseFile.js
+var elementMap = /* @__PURE__ */ new Map();
+function parseFilePath(filePath) {
+  const fileString = removeComments((0, import_fs.readFileSync)(filePath).toString());
+  try {
+    const json = JSON.parse(fileString);
+    const namespace = json["namespace"];
+    if (!namespace) return;
+    Object.entries(json).forEach(([key, value]) => {
+      if (typeof value !== "object") return;
+      traverseKeys(key, value, { filePath, namespace, controlSegments: [], variables: [] });
+    });
+  } catch (error) {
+    console.error(`Error Parsing ${filePath}`, error);
+  }
+}
+function traverseKeys(key, element, objectMeta, parentElement = void 0) {
+  const keyInfo = getKeyInfomation(key);
+  console.log(keyInfo, objectMeta);
+  const { elementName, targetNamespace, targetReference } = keyInfo;
+  const elemId = getElementIdFromKey(keyInfo, objectMeta);
+  const existingElement = elementMap.get(elemId);
+  const jsonUIELement = (
+    /**@type {JSONUIElement} */
+    existingElement || {
+      elementMeta: {},
+      elementName,
+      parentElement,
+      referencingElement: getReferenceElementByKey(keyInfo, objectMeta.namespace, objectMeta.controlSegments)
+    }
+  );
+  const variables = Object.keys(element).filter((x) => x.startsWith("$")).map((x) => x.split("|", 2)[0]);
+  const elementMeta = { ...objectMeta, variables };
+  jsonUIELement.elementMeta = elementMeta;
+  jsonUIELement.isDummy = false;
+  elementMap.set(elemId, jsonUIELement);
+  objectMeta = { ...objectMeta, controlSegments: objectMeta.controlSegments.concat([elementName]), variables };
+  element?.controls?.forEach((controllElement) => {
+    const name = Object.keys(controllElement)[0];
+    if (!name) return;
+    traverseKeys(
+      name,
+      controllElement[name],
+      { ...objectMeta, variables: [] },
+      jsonUIELement
+    );
+  });
+}
+function getElementIdFromKey(elemKey, meta) {
+  if (meta.controlSegments.length >= 1) {
+    return `${elemKey.elementName}/${meta.controlSegments.join("/")}@${meta.namespace}`;
+  }
+  return `${elemKey.elementName}@${meta.namespace}`;
+}
+function getReferenceElementByKey({ elementName, targetNamespace, targetReference }, fallbackNamespace, controlSegments = []) {
+  const namespace = targetNamespace ?? fallbackNamespace;
+  if (!targetNamespace && !targetReference) return;
+  if (!targetNamespace && targetReference && controlSegments.length >= 1) {
+    const keyId = `${targetReference}/${controlSegments.join("/")}@${namespace}`;
+    return elementMap.get(keyId) || createDummyElement(targetReference, namespace, controlSegments);
+  }
+  if (targetReference) {
+    const keyId = `${targetReference}@${targetNamespace}`;
+    return elementMap.get(keyId) || createDummyElement(targetReference, namespace);
+  }
+  console.error("Code should never come here", targetNamespace, targetReference, controlSegments);
+  return;
+}
+function createDummyElement(elementName, namespace, controlSegments = []) {
+  const dummy = {
+    elementMeta: {
+      namespace,
+      variables: [],
+      controlSegments: [],
+      filePath: void 0
+    },
+    elementName,
+    parentElement: void 0,
+    referencingElement: void 0,
+    isDummy: true
+  };
+  if (controlSegments.length >= 1) {
+    elementMap.set(`${elementName}/${controlSegments.join("/")}@${namespace}`, dummy);
+  } else {
+    elementMap.set(`${elementName}@${namespace}`, dummy);
+  }
+  return dummy;
+}
+
+// src/indexer/dataProvider.js
+var import_path = require("path");
 
 // node_modules/glob/node_modules/minimatch/dist/esm/index.js
 var import_brace_expansion = __toESM(require_brace_expansion(), 1);
@@ -1780,11 +1922,11 @@ var LRUCache = class _LRUCache {
       free: c.#free,
       // methods
       isBackgroundFetch: (p) => c.#isBackgroundFetch(p),
-      backgroundFetch: (k, index2, options, context) => c.#backgroundFetch(k, index2, options, context),
-      moveToTail: (index2) => c.#moveToTail(index2),
+      backgroundFetch: (k, index, options, context) => c.#backgroundFetch(k, index, options, context),
+      moveToTail: (index) => c.#moveToTail(index),
       indexes: (options) => c.#indexes(options),
       rindexes: (options) => c.#rindexes(options),
-      isStale: (index2) => c.#isStale(index2)
+      isStale: (index) => c.#isStale(index)
     };
   }
   // Protected read-only members
@@ -1834,7 +1976,7 @@ var LRUCache = class _LRUCache {
     return this.#disposeAfter;
   }
   constructor(options) {
-    const { max = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose: dispose2, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
+    const { max = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
     if (max !== 0 && !isPosInt(max)) {
       throw new TypeError("max option must be a nonnegative integer");
     }
@@ -1873,8 +2015,8 @@ var LRUCache = class _LRUCache {
     this.#free = Stack.create(max);
     this.#size = 0;
     this.#calculatedSize = 0;
-    if (typeof dispose2 === "function") {
-      this.#dispose = dispose2;
+    if (typeof dispose === "function") {
+      this.#dispose = dispose;
     }
     if (typeof disposeAfter === "function") {
       this.#disposeAfter = disposeAfter;
@@ -1939,13 +2081,13 @@ var LRUCache = class _LRUCache {
     const starts = new ZeroArray(this.#max);
     this.#ttls = ttls;
     this.#starts = starts;
-    this.#setItemTTL = (index2, ttl, start = perf.now()) => {
-      starts[index2] = ttl !== 0 ? start : 0;
-      ttls[index2] = ttl;
+    this.#setItemTTL = (index, ttl, start = perf.now()) => {
+      starts[index] = ttl !== 0 ? start : 0;
+      ttls[index] = ttl;
       if (ttl !== 0 && this.ttlAutopurge) {
         const t = setTimeout(() => {
-          if (this.#isStale(index2)) {
-            this.#delete(this.#keyList[index2], "expire");
+          if (this.#isStale(index)) {
+            this.#delete(this.#keyList[index], "expire");
           }
         }, ttl + 1);
         if (t.unref) {
@@ -1953,13 +2095,13 @@ var LRUCache = class _LRUCache {
         }
       }
     };
-    this.#updateItemAge = (index2) => {
-      starts[index2] = ttls[index2] !== 0 ? perf.now() : 0;
+    this.#updateItemAge = (index) => {
+      starts[index] = ttls[index] !== 0 ? perf.now() : 0;
     };
-    this.#statusTTL = (status, index2) => {
-      if (ttls[index2]) {
-        const ttl = ttls[index2];
-        const start = starts[index2];
+    this.#statusTTL = (status, index) => {
+      if (ttls[index]) {
+        const ttl = ttls[index];
+        const start = starts[index];
         if (!ttl || !start)
           return;
         status.ttl = ttl;
@@ -1982,21 +2124,21 @@ var LRUCache = class _LRUCache {
       return n;
     };
     this.getRemainingTTL = (key) => {
-      const index2 = this.#keyMap.get(key);
-      if (index2 === void 0) {
+      const index = this.#keyMap.get(key);
+      if (index === void 0) {
         return 0;
       }
-      const ttl = ttls[index2];
-      const start = starts[index2];
+      const ttl = ttls[index];
+      const start = starts[index];
       if (!ttl || !start) {
         return Infinity;
       }
       const age = (cachedNow || getNow()) - start;
       return ttl - age;
     };
-    this.#isStale = (index2) => {
-      const s = starts[index2];
-      const t = ttls[index2];
+    this.#isStale = (index) => {
+      const s = starts[index];
+      const t = ttls[index];
       return !!t && !!s && (cachedNow || getNow()) - s > t;
     };
   }
@@ -2013,9 +2155,9 @@ var LRUCache = class _LRUCache {
     const sizes = new ZeroArray(this.#max);
     this.#calculatedSize = 0;
     this.#sizes = sizes;
-    this.#removeItemSize = (index2) => {
-      this.#calculatedSize -= sizes[index2];
-      sizes[index2] = 0;
+    this.#removeItemSize = (index) => {
+      this.#calculatedSize -= sizes[index];
+      sizes[index] = 0;
     };
     this.#requireSize = (k, v, size, sizeCalculation) => {
       if (this.#isBackgroundFetch(v)) {
@@ -2036,15 +2178,15 @@ var LRUCache = class _LRUCache {
       }
       return size;
     };
-    this.#addItemSize = (index2, size, status) => {
-      sizes[index2] = size;
+    this.#addItemSize = (index, size, status) => {
+      sizes[index] = size;
       if (this.#maxSize) {
-        const maxSize = this.#maxSize - sizes[index2];
+        const maxSize = this.#maxSize - sizes[index];
         while (this.#calculatedSize > maxSize) {
           this.#evict(true);
         }
       }
-      this.#calculatedSize += sizes[index2];
+      this.#calculatedSize += sizes[index];
       if (status) {
         status.entrySize = size;
         status.totalCalculatedSize = this.#calculatedSize;
@@ -2095,8 +2237,8 @@ var LRUCache = class _LRUCache {
       }
     }
   }
-  #isValidIndex(index2) {
-    return index2 !== void 0 && this.#keyMap.get(this.#keyList[index2]) === index2;
+  #isValidIndex(index) {
+    return index !== void 0 && this.#keyMap.get(this.#keyList[index]) === index;
   }
   /**
    * Return a generator yielding `[key, value]` pairs,
@@ -2383,23 +2525,23 @@ var LRUCache = class _LRUCache {
       this.#delete(k, "set");
       return this;
     }
-    let index2 = this.#size === 0 ? void 0 : this.#keyMap.get(k);
-    if (index2 === void 0) {
-      index2 = this.#size === 0 ? this.#tail : this.#free.length !== 0 ? this.#free.pop() : this.#size === this.#max ? this.#evict(false) : this.#size;
-      this.#keyList[index2] = k;
-      this.#valList[index2] = v;
-      this.#keyMap.set(k, index2);
-      this.#next[this.#tail] = index2;
-      this.#prev[index2] = this.#tail;
-      this.#tail = index2;
+    let index = this.#size === 0 ? void 0 : this.#keyMap.get(k);
+    if (index === void 0) {
+      index = this.#size === 0 ? this.#tail : this.#free.length !== 0 ? this.#free.pop() : this.#size === this.#max ? this.#evict(false) : this.#size;
+      this.#keyList[index] = k;
+      this.#valList[index] = v;
+      this.#keyMap.set(k, index);
+      this.#next[this.#tail] = index;
+      this.#prev[index] = this.#tail;
+      this.#tail = index;
       this.#size++;
-      this.#addItemSize(index2, size, status);
+      this.#addItemSize(index, size, status);
       if (status)
         status.set = "add";
       noUpdateTTL = false;
     } else {
-      this.#moveToTail(index2);
-      const oldVal = this.#valList[index2];
+      this.#moveToTail(index);
+      const oldVal = this.#valList[index];
       if (v !== oldVal) {
         if (this.#hasFetchMethod && this.#isBackgroundFetch(oldVal)) {
           oldVal.__abortController.abort(new Error("replaced"));
@@ -2420,9 +2562,9 @@ var LRUCache = class _LRUCache {
             this.#disposed?.push([oldVal, k, "set"]);
           }
         }
-        this.#removeItemSize(index2);
-        this.#addItemSize(index2, size, status);
-        this.#valList[index2] = v;
+        this.#removeItemSize(index);
+        this.#addItemSize(index, size, status);
+        this.#valList[index] = v;
         if (status) {
           status.set = "replace";
           const oldValue = oldVal && this.#isBackgroundFetch(oldVal) ? oldVal.__staleWhileFetching : oldVal;
@@ -2438,10 +2580,10 @@ var LRUCache = class _LRUCache {
     }
     if (this.#ttls) {
       if (!noUpdateTTL) {
-        this.#setItemTTL(index2, ttl, start);
+        this.#setItemTTL(index, ttl, start);
       }
       if (status)
-        this.#statusTTL(status, index2);
+        this.#statusTTL(status, index);
     }
     if (!noDisposeOnSet && this.#hasDisposeAfter && this.#disposed) {
       const dt = this.#disposed;
@@ -2527,24 +2669,24 @@ var LRUCache = class _LRUCache {
    */
   has(k, hasOptions = {}) {
     const { updateAgeOnHas = this.updateAgeOnHas, status } = hasOptions;
-    const index2 = this.#keyMap.get(k);
-    if (index2 !== void 0) {
-      const v = this.#valList[index2];
+    const index = this.#keyMap.get(k);
+    if (index !== void 0) {
+      const v = this.#valList[index];
       if (this.#isBackgroundFetch(v) && v.__staleWhileFetching === void 0) {
         return false;
       }
-      if (!this.#isStale(index2)) {
+      if (!this.#isStale(index)) {
         if (updateAgeOnHas) {
-          this.#updateItemAge(index2);
+          this.#updateItemAge(index);
         }
         if (status) {
           status.has = "hit";
-          this.#statusTTL(status, index2);
+          this.#statusTTL(status, index);
         }
         return true;
       } else if (status) {
         status.has = "stale";
-        this.#statusTTL(status, index2);
+        this.#statusTTL(status, index);
       }
     } else if (status) {
       status.has = "miss";
@@ -2560,15 +2702,15 @@ var LRUCache = class _LRUCache {
    */
   peek(k, peekOptions = {}) {
     const { allowStale = this.allowStale } = peekOptions;
-    const index2 = this.#keyMap.get(k);
-    if (index2 === void 0 || !allowStale && this.#isStale(index2)) {
+    const index = this.#keyMap.get(k);
+    if (index === void 0 || !allowStale && this.#isStale(index)) {
       return;
     }
-    const v = this.#valList[index2];
+    const v = this.#valList[index];
     return this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
   }
-  #backgroundFetch(k, index2, options, context) {
-    const v = index2 === void 0 ? void 0 : this.#valList[index2];
+  #backgroundFetch(k, index, options, context) {
+    const v = index === void 0 ? void 0 : this.#valList[index];
     if (this.#isBackgroundFetch(v)) {
       return v;
     }
@@ -2599,10 +2741,10 @@ var LRUCache = class _LRUCache {
         return fetchFail(ac.signal.reason);
       }
       const bf2 = p;
-      if (this.#valList[index2] === p) {
+      if (this.#valList[index] === p) {
         if (v2 === void 0) {
           if (bf2.__staleWhileFetching) {
-            this.#valList[index2] = bf2.__staleWhileFetching;
+            this.#valList[index] = bf2.__staleWhileFetching;
           } else {
             this.#delete(k, "fetch");
           }
@@ -2627,12 +2769,12 @@ var LRUCache = class _LRUCache {
       const allowStale = allowStaleAborted || options.allowStaleOnFetchRejection;
       const noDelete = allowStale || options.noDeleteOnFetchRejection;
       const bf2 = p;
-      if (this.#valList[index2] === p) {
+      if (this.#valList[index] === p) {
         const del = !noDelete || bf2.__staleWhileFetching === void 0;
         if (del) {
           this.#delete(k, "fetch");
         } else if (!allowStaleAborted) {
-          this.#valList[index2] = bf2.__staleWhileFetching;
+          this.#valList[index] = bf2.__staleWhileFetching;
         }
       }
       if (allowStale) {
@@ -2666,11 +2808,11 @@ var LRUCache = class _LRUCache {
       __staleWhileFetching: v,
       __returned: void 0
     });
-    if (index2 === void 0) {
+    if (index === void 0) {
       this.set(k, bf, { ...fetchOpts.options, status: void 0 });
-      index2 = this.#keyMap.get(k);
+      index = this.#keyMap.get(k);
     } else {
-      this.#valList[index2] = bf;
+      this.#valList[index] = bf;
     }
     return bf;
   }
@@ -2728,14 +2870,14 @@ var LRUCache = class _LRUCache {
       status,
       signal
     };
-    let index2 = this.#keyMap.get(k);
-    if (index2 === void 0) {
+    let index = this.#keyMap.get(k);
+    if (index === void 0) {
       if (status)
         status.fetch = "miss";
-      const p = this.#backgroundFetch(k, index2, options, context);
+      const p = this.#backgroundFetch(k, index, options, context);
       return p.__returned = p;
     } else {
-      const v = this.#valList[index2];
+      const v = this.#valList[index];
       if (this.#isBackgroundFetch(v)) {
         const stale = allowStale && v.__staleWhileFetching !== void 0;
         if (status) {
@@ -2745,19 +2887,19 @@ var LRUCache = class _LRUCache {
         }
         return stale ? v.__staleWhileFetching : v.__returned = v;
       }
-      const isStale = this.#isStale(index2);
+      const isStale = this.#isStale(index);
       if (!forceRefresh && !isStale) {
         if (status)
           status.fetch = "hit";
-        this.#moveToTail(index2);
+        this.#moveToTail(index);
         if (updateAgeOnGet) {
-          this.#updateItemAge(index2);
+          this.#updateItemAge(index);
         }
         if (status)
-          this.#statusTTL(status, index2);
+          this.#statusTTL(status, index);
         return v;
       }
-      const p = this.#backgroundFetch(k, index2, options, context);
+      const p = this.#backgroundFetch(k, index, options, context);
       const hasStale = p.__staleWhileFetching !== void 0;
       const staleVal = hasStale && allowStale;
       if (status) {
@@ -2798,13 +2940,13 @@ var LRUCache = class _LRUCache {
    */
   get(k, getOptions = {}) {
     const { allowStale = this.allowStale, updateAgeOnGet = this.updateAgeOnGet, noDeleteOnStaleGet = this.noDeleteOnStaleGet, status } = getOptions;
-    const index2 = this.#keyMap.get(k);
-    if (index2 !== void 0) {
-      const value = this.#valList[index2];
+    const index = this.#keyMap.get(k);
+    if (index !== void 0) {
+      const value = this.#valList[index];
       const fetching = this.#isBackgroundFetch(value);
       if (status)
-        this.#statusTTL(status, index2);
-      if (this.#isStale(index2)) {
+        this.#statusTTL(status, index);
+      if (this.#isStale(index)) {
         if (status)
           status.get = "stale";
         if (!fetching) {
@@ -2826,9 +2968,9 @@ var LRUCache = class _LRUCache {
         if (fetching) {
           return value.__staleWhileFetching;
         }
-        this.#moveToTail(index2);
+        this.#moveToTail(index);
         if (updateAgeOnGet) {
-          this.#updateItemAge(index2);
+          this.#updateItemAge(index);
         }
         return value;
       }
@@ -2840,15 +2982,15 @@ var LRUCache = class _LRUCache {
     this.#prev[n] = p;
     this.#next[p] = n;
   }
-  #moveToTail(index2) {
-    if (index2 !== this.#tail) {
-      if (index2 === this.#head) {
-        this.#head = this.#next[index2];
+  #moveToTail(index) {
+    if (index !== this.#tail) {
+      if (index === this.#head) {
+        this.#head = this.#next[index];
       } else {
-        this.#connect(this.#prev[index2], this.#next[index2]);
+        this.#connect(this.#prev[index], this.#next[index]);
       }
-      this.#connect(this.#tail, index2);
-      this.#tail = index2;
+      this.#connect(this.#tail, index);
+      this.#tail = index;
     }
   }
   /**
@@ -2862,14 +3004,14 @@ var LRUCache = class _LRUCache {
   #delete(k, reason) {
     let deleted = false;
     if (this.#size !== 0) {
-      const index2 = this.#keyMap.get(k);
-      if (index2 !== void 0) {
+      const index = this.#keyMap.get(k);
+      if (index !== void 0) {
         deleted = true;
         if (this.#size === 1) {
           this.#clear(reason);
         } else {
-          this.#removeItemSize(index2);
-          const v = this.#valList[index2];
+          this.#removeItemSize(index);
+          const v = this.#valList[index];
           if (this.#isBackgroundFetch(v)) {
             v.__abortController.abort(new Error("deleted"));
           } else if (this.#hasDispose || this.#hasDisposeAfter) {
@@ -2881,20 +3023,20 @@ var LRUCache = class _LRUCache {
             }
           }
           this.#keyMap.delete(k);
-          this.#keyList[index2] = void 0;
-          this.#valList[index2] = void 0;
-          if (index2 === this.#tail) {
-            this.#tail = this.#prev[index2];
-          } else if (index2 === this.#head) {
-            this.#head = this.#next[index2];
+          this.#keyList[index] = void 0;
+          this.#valList[index] = void 0;
+          if (index === this.#tail) {
+            this.#tail = this.#prev[index];
+          } else if (index === this.#head) {
+            this.#head = this.#next[index];
           } else {
-            const pi = this.#prev[index2];
-            this.#next[pi] = this.#next[index2];
-            const ni = this.#next[index2];
-            this.#prev[ni] = this.#prev[index2];
+            const pi = this.#prev[index];
+            this.#next[pi] = this.#next[index];
+            const ni = this.#next[index];
+            this.#prev[ni] = this.#prev[index];
           }
           this.#size--;
-          this.#free.push(index2);
+          this.#free.push(index);
         }
       }
     }
@@ -2914,12 +3056,12 @@ var LRUCache = class _LRUCache {
     return this.#clear("delete");
   }
   #clear(reason) {
-    for (const index2 of this.#rindexes({ allowStale: true })) {
-      const v = this.#valList[index2];
+    for (const index of this.#rindexes({ allowStale: true })) {
+      const v = this.#valList[index];
       if (this.#isBackgroundFetch(v)) {
         v.__abortController.abort(new Error("deleted"));
       } else {
-        const k = this.#keyList[index2];
+        const k = this.#keyList[index];
         if (this.#hasDispose) {
           this.#dispose?.(v, k, reason);
         }
@@ -2956,7 +3098,7 @@ var LRUCache = class _LRUCache {
 // node_modules/path-scurry/dist/esm/index.js
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
-var import_fs = require("fs");
+var import_fs2 = require("fs");
 var actualFS = __toESM(require("node:fs"), 1);
 var import_promises = require("node:fs/promises");
 
@@ -3839,12 +3981,12 @@ var Minipass = class extends import_node_events.EventEmitter {
 };
 
 // node_modules/path-scurry/dist/esm/index.js
-var realpathSync = import_fs.realpathSync.native;
+var realpathSync = import_fs2.realpathSync.native;
 var defaultFS = {
-  lstatSync: import_fs.lstatSync,
-  readdir: import_fs.readdir,
-  readdirSync: import_fs.readdirSync,
-  readlinkSync: import_fs.readlinkSync,
+  lstatSync: import_fs2.lstatSync,
+  readdir: import_fs2.readdir,
+  readdirSync: import_fs2.readdirSync,
+  readlinkSync: import_fs2.readlinkSync,
   realpathSync,
   promises: {
     lstat: import_promises.lstat,
@@ -4550,16 +4692,16 @@ var PathBase = class {
       return this.#readdirPromoteChild(e, pchild, p, c);
     }
   }
-  #readdirPromoteChild(e, p, index2, c) {
+  #readdirPromoteChild(e, p, index, c) {
     const v = p.name;
     p.#type = p.#type & IFMT_UNKNOWN | entToType(e);
     if (v !== e.name)
       p.name = e.name;
-    if (index2 !== c.provisional) {
-      if (index2 === c.length - 1)
+    if (index !== c.provisional) {
+      if (index === c.length - 1)
         c.pop();
       else
-        c.splice(index2, 1);
+        c.splice(index, 1);
       c.unshift(p);
     }
     c.provisional++;
@@ -5579,7 +5721,7 @@ var Pattern = class _Pattern {
   #isUNC;
   #isAbsolute;
   #followGlobstar = true;
-  constructor(patternList, globList, index2, platform) {
+  constructor(patternList, globList, index, platform) {
     if (!isPatternList(patternList)) {
       throw new TypeError("empty pattern list");
     }
@@ -5590,12 +5732,12 @@ var Pattern = class _Pattern {
       throw new TypeError("mismatched pattern list and glob list lengths");
     }
     this.length = patternList.length;
-    if (index2 < 0 || index2 >= this.length) {
+    if (index < 0 || index >= this.length) {
       throw new TypeError("index out of range");
     }
     this.#patternList = patternList;
     this.#globList = globList;
-    this.#index = index2;
+    this.#index = index;
     this.#platform = platform;
     if (this.#index === 0) {
       if (this.isUNC()) {
@@ -6624,153 +6766,43 @@ var glob = Object.assign(glob_, {
 });
 glob.glob = glob;
 
-// src/indexer.js
-var import_path = require("path");
-var import_vscode = require("vscode");
-var elementMap = /* @__PURE__ */ new Map();
+// src/indexer/dataProvider.js
 var totalElementsAutoCompletions = [];
-function getElementByKey(key) {
-  const { elementName, targetNamespace, targetReference } = getKeyInfomation(key);
-  if (!targetNamespace) return;
-  return elementMap.get(`${targetReference}@${targetNamespace}`);
-}
-function revalidateFile(filePath) {
-  const fileString = (0, import_fs2.readFileSync)(filePath).toString();
-  const withoutComments = fileString.replace(/"(?:\\.|[^"\\])*"|\s*\/\/.*|\/\*[\s\S]*?\*\//g, (match2) => {
-    if (match2.startsWith('"')) {
-      return match2;
-    }
-    return "";
-  });
-  try {
-    const json = JSON.parse(withoutComments);
-    const namespace = json.namespace;
-    if (!namespace || typeof namespace !== "string") return;
-    Object.keys(json).forEach((key) => {
-      if (key === "namespace") return;
-      const variables = Object.keys(json[key]).filter((x) => x.startsWith("$")).map((x) => x.split("|", 2)[0]);
-      index(getKeyInfomation(key), namespace, json[key], { filePath, variables });
-    });
-  } catch (error) {
-    console.error(`Error parsing JSON file: ${withoutComments}`, error);
-  }
-}
-var watcher;
-async function main() {
+async function inizialize() {
   const pattern = `./**/ui/**/*.+(json)`;
+  const watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
   async function initializeFully() {
     const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) return console.warn("Not in a workspace");
     for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
-      revalidateFile((0, import_path.join)(workspacePath, file));
+      parseFilePath((0, import_path.join)(workspacePath, file));
     }
     elementMap.forEach((element, key) => {
       totalElementsAutoCompletions.push(element);
     });
+    console.log(elementMap);
   }
-  initializeFully();
-  watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
   watcher.onDidChange((file) => {
-    revalidateFile(file.fsPath);
+    parseFilePath(file.fsPath);
     console.log("refreshed:", elementMap);
   });
   watcher.onDidCreate((file) => {
-    revalidateFile(file.fsPath);
+    parseFilePath(file.fsPath);
   });
   watcher.onDidDelete((file) => {
-    elementMap = /* @__PURE__ */ new Map();
+    elementMap.clear();
     totalElementsAutoCompletions = [];
     initializeFully();
   });
-}
-function dispose() {
-  watcher?.dispose();
-}
-main();
-function index(keyInfo, namespace, jsonElement, additionalData) {
-  const { elementName: sourceName, targetNamespace, targetReference } = keyInfo;
-  const element = elementMap.get(`${sourceName}@${namespace}`) || new JSONUIElement(namespace, sourceName);
-  if (targetNamespace) {
-    const elem = elementMap.get(`${targetReference}@${targetNamespace}`) || new JSONUIElement(targetNamespace, targetReference);
-    elem.addReferencedBy(element);
-    element.setReference(elem);
-    elementMap.set(elem.toString(), elem);
-  }
-  if (additionalData) {
-    element.setMetaData(additionalData);
-  }
-  elementMap.set(element.toString(), element);
-  jsonElement.controls?.forEach((controllElement) => {
-    const name = Object.keys(controllElement)[0];
-    if (!name) return;
-    index(getKeyInfomation(name), namespace, controllElement[name]);
-  });
-}
-function getKeyInfomation(key) {
-  const [main2, extra] = key.split("@", 2);
-  const elementName = main2.trim();
-  if (!extra) return {
-    elementName,
-    targetNamespace: void 0,
-    targetReference: void 0
-  };
-  const [ns, ref] = extra.split(".", 2);
-  const targetNamespace = ns?.trim();
-  const targetReference = ref?.trim();
+  initializeFully();
   return {
-    elementName,
-    targetNamespace,
-    targetReference
+    dispose() {
+      watcher.dispose();
+    }
   };
 }
-var JSONUIElement = class {
-  /**@type {JSONUIElement | undefined} */
-  reference;
-  /**@type {JSONUIElement[]} */
-  referencedBy = [];
-  /**
-   * @type {import("./types").JSONElementMeta | undefined}
-   */
-  metadata;
-  /**
-   * @param {string} namespace
-   * @param {string} elementName
-   */
-  constructor(namespace, elementName) {
-    this.namespace = namespace;
-    this.elementName = elementName;
-  }
-  toString() {
-    return `${this.elementName}@${this.namespace}`;
-  }
-  getValue() {
-    return elementMap.get(this.toString());
-  }
-  /**
-   * @param {import("./types").JSONElementMeta} data
-   */
-  setMetaData(data) {
-    this.metadata = data;
-  }
-  /**
-   * @param {JSONUIElement} reference
-   */
-  setReference(reference) {
-    if (this.reference) {
-      console.warn(`WARNING: Element with duplicate name: INCOMMING ${reference.toString()} <-> AGAINST ${this.reference.toString()}`);
-    }
-    this.reference = reference;
-  }
-  /**
-   * @param {JSONUIElement} reference
-   */
-  addReferencedBy(reference) {
-    this.referencedBy.push(reference);
-  }
-};
 
 // src/providers/referenceCompletions.js
-var import_vscode2 = require("vscode");
 var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionItemProvider("json", {
   provideCompletionItems(document, position) {
     const textBeforeCursor = document.getText(new import_vscode2.Range(new import_vscode2.Position(position.line, 0), position));
@@ -6778,19 +6810,41 @@ var ReferenceCompletionProvider = import_vscode2.languages.registerCompletionIte
     if (atSymbolIndex === -1) return [];
     const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
     const filteredSuggestions = totalElementsAutoCompletions.filter(
-      (x) => `${x.namespace}.${x.elementName}`.includes(word)
+      (x) => `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0
     );
-    return filteredSuggestions.map((x) => ({
-      label: `@${x.namespace}.${x.elementName}`,
-      kind: import_vscode2.CompletionItemKind.Variable,
-      insertText: `@${x.namespace}.${x.elementName}`,
-      range: new import_vscode2.Range(
-        new import_vscode2.Position(position.line, atSymbolIndex),
-        position
-      )
-    }));
+    return filteredSuggestions.map((x) => {
+      return {
+        label: `@${x.elementMeta.namespace}.${x.elementName}`,
+        kind: import_vscode2.CompletionItemKind.Variable,
+        insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
+        range: new import_vscode2.Range(
+          new import_vscode2.Position(position.line, atSymbolIndex),
+          position
+        )
+      };
+    });
   }
 }, "@");
+var ControlCompletionProvider = import_vscode2.languages.registerCompletionItemProvider("json", {
+  provideCompletionItems(document, position) {
+    const textBeforeCursor = document.lineAt(position.line);
+    const charIndex = textBeforeCursor.firstNonWhitespaceCharacterIndex;
+    const symdex = textBeforeCursor.text[charIndex];
+    if (symdex !== '"') return;
+    const filteredSuggestions = totalElementsAutoCompletions.filter((x) => x.elementMeta.controlSegments.length >= 1);
+    return filteredSuggestions.map((x) => {
+      return {
+        label: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
+        kind: import_vscode2.CompletionItemKind.Variable,
+        insertText: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
+        range: new import_vscode2.Range(
+          new import_vscode2.Position(position.line, charIndex + 1),
+          position
+        )
+      };
+    });
+  }
+}, '"');
 
 // src/providers/referenceDeffenitions.js
 var import_vscode3 = require("vscode");
@@ -6801,9 +6855,8 @@ var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionPr
     const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*:/;
     const match2 = jsonKeyPattern.exec(lineText.trim());
     if (match2 === null) return;
-    const key = `${match2[1]}@${match2[2]}.${match2[3]}`;
-    const jsonElement = getElementByKey(key);
-    const meta = jsonElement?.metadata;
+    const jsonElement = elementMap.get(`${[match2[3]]}@${[match2[2]]}`);
+    const meta = jsonElement?.elementMeta;
     if (!meta) return;
     const { filePath } = meta;
     if (!filePath) return;
@@ -6819,33 +6872,30 @@ var ReferenceDeffenitionProvider = import_vscode3.languages.registerDefinitionPr
 var import_vscode4 = require("vscode");
 var VariableCompletionProvider = import_vscode4.languages.registerCompletionItemProvider("json", {
   provideCompletionItems(document, position) {
-    const text = document.getText();
-    const offset = document.offsetAt(position);
     const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
-    function findPatternUpwards(text2, offset2, pattern) {
-      const slicedText = text2.slice(0, offset2);
-      let match2;
-      let index2 = slicedText.length;
-      while (index2 > 0) {
-        const result = slicedText.slice(0, index2).match(pattern);
-        if (result) {
-          match2 = result[1];
-          break;
-        }
-        index2 = slicedText.lastIndexOf("\n", index2 - 1);
+    function findPatternUpwards() {
+      let match2 = null;
+      let lineOffset = 0;
+      while (match2 === null) {
+        if (position.line - lineOffset++ <= 0) break;
+        const lineText = document.lineAt(position.line - lineOffset++).text;
+        match2 = lineText.match(searchPattern);
       }
-      return match2;
+      if (!match2) return;
+      return match2[1];
     }
-    const anyKeyString = findPatternUpwards(text, offset, searchPattern);
+    const anyKeyString = findPatternUpwards();
     if (!anyKeyString) return;
-    const keyData = getElementByKey(anyKeyString);
-    if (!keyData) return;
+    const keyInfo = getKeyInfomation(anyKeyString);
+    const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
+    console.warn(anyKeyString);
+    if (!element) return;
     const textBeforeCursor = document.getText(new import_vscode4.Range(new import_vscode4.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
     const range = dollarSignIndex >= 0 ? new import_vscode4.Range(new import_vscode4.Position(position.line, dollarSignIndex), position) : new import_vscode4.Range(position, position);
-    return keyData.metadata?.variables.map((x) => ({
+    return getVariableTree(element).map((x) => ({
       sortText: "!!!",
       label: x,
       insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
@@ -6859,7 +6909,8 @@ var VariableCompletionProvider = import_vscode4.languages.registerCompletionItem
 var providers = [
   ReferenceCompletionProvider,
   VariableCompletionProvider,
-  ReferenceDeffenitionProvider
+  ReferenceDeffenitionProvider,
+  ControlCompletionProvider
 ];
 function registerProviders(context) {
   context.subscriptions.push(...providers);
@@ -6892,6 +6943,12 @@ function useColours() {
       colorizeJson(editor);
     }
   });
+  import_vscode6.workspace.onDidChangeTextDocument((event) => {
+    const editor = import_vscode6.window.activeTextEditor;
+    if (editor && editor.document === event.document && editor.document.languageId === "json") {
+      colorizeJson(editor);
+    }
+  });
   if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId === "json") {
     colorizeJson(import_vscode6.window.activeTextEditor);
   }
@@ -6904,7 +6961,7 @@ function useColours() {
         decoration: namespaceDecoration
       },
       {
-        regex: /(?<=["\b])(\w+)(?=@|\s*":\s*\{)/g,
+        regex: /(?<=["\b])([\w\/]+)(?=@|\s*"\s*:\s*\{)/g,
         decoration: elementDecoration
       },
       {
@@ -6943,13 +7000,13 @@ function useColours() {
 // src/extension.js
 var docInfo = "json";
 function activate(context) {
-  const config = import_vscode7.default.workspace.getConfiguration("editor");
+  const config = import_vscode7.workspace.getConfiguration("editor");
   config.update("wordSeparators", "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/?");
   useColours();
   registerProviders(context);
+  inizialize();
 }
 function deactivate() {
-  dispose();
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
