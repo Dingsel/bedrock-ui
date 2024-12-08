@@ -2,6 +2,7 @@ import { workspace } from 'vscode';
 import { registerProviders } from './providerIndex.js';
 import { useColours } from './providers/jsonColorization.js';
 import { inizialize } from './indexer/dataProvider.js';
+import "./indexer/glovalVariables.js"
 
 /**
  * @param {import('vscode').ExtensionContext} context

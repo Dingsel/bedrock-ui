@@ -254,7 +254,20 @@ var import_vscode3 = require("vscode");
 var import_vscode = require("vscode");
 
 // src/indexer/parseFile.js
+var import_fs2 = require("fs");
+
+// src/indexer/glovalVariables.js
 var import_fs = require("fs");
+var globalVariables = [];
+function parseGlobalVarsFromFilePath(filePath) {
+  const fileString = removeComments((0, import_fs.readFileSync)(filePath).toString());
+  try {
+    const json = JSON.parse(fileString);
+    globalVariables = Object.keys(json).filter((x) => x.startsWith("$"));
+  } catch (error) {
+    console.warn("Failed to parse global variables", error);
+  }
+}
 
 // src/indexer/utils.js
 function removeComments(string) {
@@ -297,7 +310,7 @@ function getVariableTree(element) {
     arr.push(...element.elementMeta.variables);
     currentElement = element.parentElement;
   } while (currentElement);
-  return arr;
+  return arr.concat(globalVariables);
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
@@ -306,7 +319,7 @@ function isProbablyJSONUI(fileContent) {
 // src/indexer/parseFile.js
 var elementMap = /* @__PURE__ */ new Map();
 function parseFilePath(filePath) {
-  const fileString = removeComments((0, import_fs.readFileSync)(filePath).toString());
+  const fileString = removeComments((0, import_fs2.readFileSync)(filePath).toString());
   try {
     const json = JSON.parse(fileString);
     const namespace = json["namespace"];
@@ -321,7 +334,6 @@ function parseFilePath(filePath) {
 }
 function traverseKeys(key, element, objectMeta, parentElement = void 0) {
   const keyInfo = getKeyInfomation(key);
-  console.log(keyInfo, objectMeta);
   const { elementName, targetNamespace, targetReference } = keyInfo;
   const elemId = getElementIdFromKey(keyInfo, objectMeta);
   const existingElement = elementMap.get(elemId);
@@ -340,15 +352,27 @@ function traverseKeys(key, element, objectMeta, parentElement = void 0) {
   jsonUIELement.isDummy = false;
   elementMap.set(elemId, jsonUIELement);
   objectMeta = { ...objectMeta, controlSegments: objectMeta.controlSegments.concat([elementName]), variables };
-  element?.controls?.forEach((controllElement) => {
+  function parseChild(controllElement) {
+    if (typeof controllElement !== "object" || Array.isArray(controllElement) || controllElement === null) return;
+    const element2 = (
+      /** @type {{[key : string] : any}}*/
+      controllElement
+    );
     const name = Object.keys(controllElement)[0];
-    if (!name) return;
+    if (!name || typeof element2[name] !== "object" || Array.isArray(element2[name] || element2 === null)) return;
     traverseKeys(
       name,
-      controllElement[name],
+      element2[name],
       { ...objectMeta, variables: [] },
       jsonUIELement
     );
+  }
+  if (Array.isArray(element?.controls)) {
+    element.controls.forEach(parseChild);
+  }
+  Object.keys(element).filter((x) => x.startsWith("$")).forEach((key2) => {
+    if (!Array.isArray(element[key2])) return;
+    element[key2].forEach(parseChild);
   });
 }
 function getElementIdFromKey(elemKey, meta) {
@@ -3100,7 +3124,7 @@ var LRUCache = class _LRUCache {
 // node_modules/path-scurry/dist/esm/index.js
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
-var import_fs2 = require("fs");
+var import_fs3 = require("fs");
 var actualFS = __toESM(require("node:fs"), 1);
 var import_promises = require("node:fs/promises");
 
@@ -3983,12 +4007,12 @@ var Minipass = class extends import_node_events.EventEmitter {
 };
 
 // node_modules/path-scurry/dist/esm/index.js
-var realpathSync = import_fs2.realpathSync.native;
+var realpathSync = import_fs3.realpathSync.native;
 var defaultFS = {
-  lstatSync: import_fs2.lstatSync,
-  readdir: import_fs2.readdir,
-  readdirSync: import_fs2.readdirSync,
-  readlinkSync: import_fs2.readlinkSync,
+  lstatSync: import_fs3.lstatSync,
+  readdir: import_fs3.readdir,
+  readdirSync: import_fs3.readdirSync,
+  readlinkSync: import_fs3.readlinkSync,
   realpathSync,
   promises: {
     lstat: import_promises.lstat,
@@ -6777,7 +6801,10 @@ async function inizialize() {
     const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) return console.warn("Not in a workspace");
     for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
-      parseFilePath((0, import_path.join)(workspacePath, file));
+      const fileName = (0, import_path.join)(workspacePath, file);
+      if (file.endsWith("_global_variables.json")) {
+        parseGlobalVarsFromFilePath(fileName);
+      } else parseFilePath(fileName);
     }
     elementMap.forEach((element, key) => {
       totalElementsAutoCompletions.push(element);
@@ -6785,11 +6812,15 @@ async function inizialize() {
     console.log(elementMap);
   }
   watcher.onDidChange((file) => {
-    parseFilePath(file.fsPath);
+    if (file.fsPath.endsWith("_global_variables.json")) {
+      parseGlobalVarsFromFilePath(file.fsPath);
+    } else parseFilePath(file.fsPath);
     console.log("refreshed:", elementMap);
   });
   watcher.onDidCreate((file) => {
-    parseFilePath(file.fsPath);
+    if (file.fsPath.endsWith("_global_variables.json")) {
+      parseGlobalVarsFromFilePath(file.fsPath);
+    } else parseFilePath(file.fsPath);
   });
   watcher.onDidDelete((file) => {
     elementMap.clear();
@@ -6868,7 +6899,7 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
 
 // src/providers/referenceDeffenitions.js
 var import_vscode4 = require("vscode");
-var import_fs3 = require("fs");
+var import_fs4 = require("fs");
 var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
@@ -6881,7 +6912,7 @@ var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionPr
     if (!meta) return;
     const { filePath } = meta;
     if (!filePath) return;
-    const fileLines = (0, import_fs3.readFileSync)(filePath).toString().split("\n");
+    const fileLines = (0, import_fs4.readFileSync)(filePath).toString().split("\n");
     const startLine = fileLines.findIndex((x) => x.includes(`"${jsonElement.elementName}`));
     const startChar = fileLines.find((x) => x.includes(`"${jsonElement.elementName}`))?.indexOf('"') ?? 0;
     const startPosition = new import_vscode4.Position(startLine !== -1 ? startLine : 0, startChar);
@@ -6894,14 +6925,15 @@ var import_vscode5 = require("vscode");
 var VariableCompletionProvider = import_vscode5.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
-    const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
     function findPatternUpwards() {
+      const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
       let match2 = null;
       let lineOffset = 0;
       while (match2 === null) {
-        if (position.line - lineOffset++ <= 0) break;
-        const lineText = document.lineAt(position.line - lineOffset++).text;
+        if (position.line - lineOffset <= 0) break;
+        const lineText = document.lineAt(position.line - lineOffset).text;
         match2 = lineText.match(searchPattern);
+        lineOffset++;
       }
       if (!match2) return;
       return match2[1];
@@ -6910,7 +6942,6 @@ var VariableCompletionProvider = import_vscode5.languages.registerCompletionItem
     if (!anyKeyString) return;
     const keyInfo = getKeyInfomation(anyKeyString);
     const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
-    console.warn(anyKeyString);
     if (!element) return;
     const textBeforeCursor = document.getText(new import_vscode5.Range(new import_vscode5.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
@@ -7025,3 +7056,4 @@ function deactivate() {
   activate,
   deactivate
 });
+//# sourceMappingURL=extension.js.map

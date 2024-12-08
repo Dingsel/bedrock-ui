@@ -14,7 +14,11 @@ The ui files need to be in a /ui/ wolder which should also be in your current wo
 Trying to autocomplete variables sometimes makes the suggestion appear at the bottom
 
 ## TODO
+Gloal Variables
 Error reporting
 referencedBy on nested elements
+
+## Atribution
+This project uses JSON UI Schemas from [KalmeMarq]()
 
 **Enjoy!**

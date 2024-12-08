@@ -2,11 +2,12 @@
     "name": "bedrock-ui",
     "displayName": "bedrock-ui",
     "description": "",
+    "publisher": "Dingsel",
     "icon": "./UIX.png",
     "repository": {
         "url": "https://github.com/Dingsel/bedrock-ui"
     },
-    "version": "0.0.3",
+    "version": "0.0.8",
     "engines": {
         "vscode": "^1.95.0"
     },
@@ -26,7 +27,7 @@
                     "!_ui_defs.json",
                     "!_global_variables.json"
                 ],
-                "url": "https://kalmemarq.github.io/Bugrock-JSON-UI-Schemas/ui.schema.json"
+                "url": "./Bugrock-JSON-UI-Schemas/ui.schema.json"
             }
         ],
         "languages": [
@@ -47,8 +48,8 @@
     "scripts": {
         "lint": "eslint .",
         "pretest": "npm run lint",
-        "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node",
-        "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --platform=node --watch",
+        "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node",
+        "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node --watch",
         "test": "vscode-test",
         "package": "vsce package",
         "publish": "vsce publish"

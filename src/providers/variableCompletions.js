@@ -6,16 +6,17 @@ import { docInfo } from "../global";
 export const VariableCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
         if (!isProbablyJSONUI(document.getText())) return
-        const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
 
         function findPatternUpwards() {
+            const searchPattern = /"([\w@\.]+)"\s*:\s*\{/;
             let match = null;
             let lineOffset = 0;
 
             while (match === null) {
-                if (position.line - (lineOffset++) <= 0) break;
-                const lineText = document.lineAt(position.line - (lineOffset++)).text;
+                if (position.line - lineOffset <= 0) break;
+                const lineText = document.lineAt(position.line - lineOffset).text;
                 match = lineText.match(searchPattern)
+                lineOffset++
             }
 
             if (!match) return
@@ -27,7 +28,6 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
         if (!anyKeyString) return;
         const keyInfo = getKeyInfomation(anyKeyString)
         const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
-        console.warn(anyKeyString)
 
         if (!element) return;
 

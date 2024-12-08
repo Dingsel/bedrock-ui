@@ -1,3 +1,5 @@
+import { globalVariables } from "./glovalVariables";
+
 /**
  * @param {string} string
  */
@@ -58,7 +60,7 @@ export function getVariableTree(element) {
         currentElement = element.parentElement
     } while (currentElement)
 
-    return arr
+    return arr.concat(globalVariables)
 }
 
 /**

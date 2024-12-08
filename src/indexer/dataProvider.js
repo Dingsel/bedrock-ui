@@ -2,6 +2,7 @@ import { workspace } from "vscode"
 import { elementMap, parseFilePath } from "./parseFile"
 import { join } from "path"
 import { glob } from "glob"
+import { parseGlobalVarsFromFilePath } from "./glovalVariables"
 
 /**
  * @type {JSONUIElement[]}
@@ -16,7 +17,11 @@ export async function inizialize() {
         const workspacePath = workspace?.workspaceFolders?.[0]?.uri.fsPath
         if (!workspacePath) return console.warn("Not in a workspace")
         for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
-            parseFilePath(join(workspacePath, file))
+            const fileName = join(workspacePath, file)
+
+            if (file.endsWith("_global_variables.json")) {
+                parseGlobalVarsFromFilePath(fileName)
+            } else parseFilePath(fileName)
         }
 
         elementMap.forEach((element, key) => {
@@ -27,12 +32,17 @@ export async function inizialize() {
     }
 
     watcher.onDidChange((file) => {
-        parseFilePath(file.fsPath)
+        if (file.fsPath.endsWith("_global_variables.json")) {
+            parseGlobalVarsFromFilePath(file.fsPath)
+        } else parseFilePath(file.fsPath)
+
         console.log("refreshed:", elementMap)
     })
 
     watcher.onDidCreate((file) => {
-        parseFilePath(file.fsPath)
+        if (file.fsPath.endsWith("_global_variables.json")) {
+            parseGlobalVarsFromFilePath(file.fsPath)
+        } else parseFilePath(file.fsPath)
     })
 
     watcher.onDidDelete((file) => {

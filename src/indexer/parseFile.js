@@ -37,7 +37,6 @@ export function parseFilePath(filePath) {
  */
 function traverseKeys(key, element, objectMeta, parentElement = undefined) {
     const keyInfo = getKeyInfomation(key)
-    console.log(keyInfo, objectMeta)
     const { elementName, targetNamespace, targetReference } = keyInfo
     const elemId = getElementIdFromKey(keyInfo, objectMeta)
 
@@ -59,15 +58,29 @@ function traverseKeys(key, element, objectMeta, parentElement = undefined) {
 
     objectMeta = { ...objectMeta, controlSegments: objectMeta.controlSegments.concat([elementName]), variables }
 
-    element?.controls?.forEach((/** @type {{ [x: string]: any; }} */ controllElement) => {
+    /**
+     * @param {unknown} controllElement
+     */
+    function parseChild(controllElement) {
+        if (typeof controllElement !== "object" || Array.isArray(controllElement) || controllElement === null) return
+        const element = /** @type {{[key : string] : any}}*/(controllElement)
         const name = Object.keys(controllElement)[0]
-        if (!name) return
+        if (!name || typeof element[name] !== "object" || Array.isArray(element[name] || element === null)) return
         traverseKeys(
             name,
-            controllElement[name],
+            element[name],
             { ...objectMeta, variables: [] },
             jsonUIELement
         )
+    }
+
+    if (Array.isArray(element?.controls)) {
+        element.controls.forEach(parseChild)
+    }
+
+    Object.keys(element).filter(x => x.startsWith("$")).forEach((key) => {
+        if (!Array.isArray(element[key])) return
+        element[key].forEach(parseChild)
     })
 }
 
