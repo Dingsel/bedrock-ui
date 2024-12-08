@@ -1,0 +1,3 @@
+[submodule "Bugrock-JSON-UI-Schemas"]
+	path = Bugrock-JSON-UI-Schemas
+	url = https://github.com/KalmeMarq/Bugrock-JSON-UI-Schemas.git
