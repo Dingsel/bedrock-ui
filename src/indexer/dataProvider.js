@@ -34,15 +34,24 @@ export async function inizialize() {
     watcher.onDidChange((file) => {
         if (file.fsPath.endsWith("_global_variables.json")) {
             parseGlobalVarsFromFilePath(file.fsPath)
-        } else parseFilePath(file.fsPath)
+        } else {
+            elementMap.clear()
+            totalElementsAutoCompletions = []
 
+            initializeFully()
+        }
         console.log("refreshed:", elementMap)
     })
 
     watcher.onDidCreate((file) => {
         if (file.fsPath.endsWith("_global_variables.json")) {
             parseGlobalVarsFromFilePath(file.fsPath)
-        } else parseFilePath(file.fsPath)
+        } else {
+            elementMap.clear()
+            totalElementsAutoCompletions = []
+
+            initializeFully()
+        }
     })
 
     watcher.onDidDelete((file) => {
