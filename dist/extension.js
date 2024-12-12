@@ -6795,7 +6795,7 @@ glob.glob = glob;
 // src/indexer/dataProvider.js
 var totalElementsAutoCompletions = [];
 async function inizialize() {
-  const pattern = `ui/**/*.+(json)`;
+  const pattern = `**/ui/**/*.+(json)`;
   const watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
   async function initializeFully() {
     const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;

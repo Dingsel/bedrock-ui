@@ -10,3 +10,4 @@ src
 **/*.map
 **/eslint.config.mjs
 **/.vscode-test.*
+.env
