@@ -11,3 +11,4 @@ src
 **/eslint.config.mjs
 **/.vscode-test.*
 .env
+Bugrock-JSON-UI-Schemas/old_ui.schema.json
