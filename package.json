@@ -23,11 +23,24 @@
         "jsonValidation": [
             {
                 "fileMatch": [
-                    "*.{json,jsonc,json5}",
+                    "ui/**/*.{json,jsonc,json5}",
+                    "*.ui.json",
                     "!_ui_defs.json",
                     "!_global_variables.json"
                 ],
                 "url": "./Bugrock-JSON-UI-Schemas/ui.schema.json"
+            },
+            {
+                "url": "./Bugrock-JSON-UI-Schemas/ui_defs.schema.json",
+                "fileMatch": [
+                    "_ui_defs.json"
+                ]
+            },
+            {
+                "url": "./Bugrock-JSON-UI-Schemas/global_variables.schema.json",
+                "fileMatch": [
+                    "_global_variables.json"
+                ]
             }
         ],
         "languages": [
@@ -68,4 +81,3 @@
         "glob": "^11.0.0"
     }
 }
-

@@ -16,7 +16,7 @@ export async function inizialize() {
     async function initializeFully() {
         const workspacePath = workspace?.workspaceFolders?.[0]?.uri.fsPath
         if (!workspacePath) return console.warn("Not in a workspace")
-        for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
+        for await (const file of glob.globIterate(pattern, { nodir: true, cwd: workspacePath })) {
             const fileName = join(workspacePath, file)
 
             if (file.endsWith("_global_variables.json")) {

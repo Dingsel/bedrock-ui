@@ -245,7 +245,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode7 = require("vscode");
+var import_vscode9 = require("vscode");
 
 // src/providers/referenceCompletions.js
 var import_vscode3 = require("vscode");
@@ -6800,7 +6800,7 @@ async function inizialize() {
   async function initializeFully() {
     const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) return console.warn("Not in a workspace");
-    for await (const file of glob.globIterate(pattern, { nodir: true, realpath: false, cwd: workspacePath })) {
+    for await (const file of glob.globIterate(pattern, { nodir: true, cwd: workspacePath })) {
       const fileName = (0, import_path.join)(workspacePath, file);
       if (file.endsWith("_global_variables.json")) {
         parseGlobalVarsFromFilePath(fileName);
@@ -6814,13 +6814,21 @@ async function inizialize() {
   watcher.onDidChange((file) => {
     if (file.fsPath.endsWith("_global_variables.json")) {
       parseGlobalVarsFromFilePath(file.fsPath);
-    } else parseFilePath(file.fsPath);
+    } else {
+      elementMap.clear();
+      totalElementsAutoCompletions = [];
+      initializeFully();
+    }
     console.log("refreshed:", elementMap);
   });
   watcher.onDidCreate((file) => {
     if (file.fsPath.endsWith("_global_variables.json")) {
       parseGlobalVarsFromFilePath(file.fsPath);
-    } else parseFilePath(file.fsPath);
+    } else {
+      elementMap.clear();
+      totalElementsAutoCompletions = [];
+      initializeFully();
+    }
   });
   watcher.onDidDelete((file) => {
     elementMap.clear();
@@ -6920,9 +6928,86 @@ var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionPr
   }
 });
 
-// src/providers/variableCompletions.js
+// src/providers/textureCompletionLensProvider.js
+var import_vscode6 = require("vscode");
+
+// src/indexer/texureDataProvider.js
 var import_vscode5 = require("vscode");
-var VariableCompletionProvider = import_vscode5.languages.registerCompletionItemProvider(docInfo, {
+var textureMap = /* @__PURE__ */ new Map();
+function getFileKey(string) {
+  const arr = string.split(".");
+  arr.pop();
+  return arr.join(".").replaceAll("\\", "/");
+}
+async function initializeTextures() {
+  const pattern = `**/textures/**/*.{json,jsonc,json5,png,jpg}`;
+  const watcher = import_vscode5.workspace.createFileSystemWatcher("**/textures/**");
+  const workspacePath = import_vscode5.workspace?.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspacePath) return console.warn("Not in a workspace");
+  for await (const file of glob.globIterate(pattern, { nodir: true, cwd: workspacePath })) {
+    parseTexture(file);
+  }
+  watcher.onDidCreate((file) => {
+    parseTexture(file.fsPath);
+  });
+  watcher.onDidChange((file) => {
+    parseTexture(file.fsPath);
+  });
+  watcher.onDidDelete((file) => {
+    textureMap.delete(file.fsPath);
+  });
+  return {
+    dispose() {
+      watcher.dispose();
+    }
+  };
+}
+function parseTexture(path2) {
+  const key = getFileKey(path2);
+  const prevData = textureMap.get(key) || {};
+  if (path2.endsWith(".png") || path2.endsWith(".jpg")) {
+    prevData.texturePath = path2;
+  }
+  if (path2.includes(".json")) {
+    prevData.slicePath = path2;
+  }
+  if (!prevData.slicePath && !prevData.texturePath) return;
+  textureMap.set(key, prevData);
+}
+
+// src/providers/textureCompletionLensProvider.js
+var TextureDeffenitionProvider = import_vscode6.languages.registerCompletionItemProvider(docInfo, {
+  provideCompletionItems(document, position) {
+    const line = document.lineAt(position.line).text;
+    if (!isProbablyJSONUI(document.getText()) || !line.includes("texture")) return;
+    let charIndex = -1;
+    let offset = 0;
+    while (charIndex === -1) {
+      if (position.character - offset <= 0) break;
+      const char = line[position.character - ++offset];
+      if (char === '"') {
+        charIndex = position.character - offset;
+      }
+    }
+    if (charIndex === -1) return;
+    const prevText = line.substring(0, charIndex);
+    if (!/\"\w+\"\s*:\s*/.test(prevText)) return;
+    return [...textureMap.keys()].map((x) => ({
+      sortText: "!!!",
+      label: x,
+      insertText: x,
+      kind: import_vscode6.CompletionItemKind.EnumMember,
+      range: new import_vscode6.Range(
+        new import_vscode6.Position(position.line, charIndex + 1),
+        position
+      )
+    }));
+  }
+}, '"');
+
+// src/providers/variableCompletions.js
+var import_vscode7 = require("vscode");
+var VariableCompletionProvider = import_vscode7.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
     function findPatternUpwards() {
@@ -6943,16 +7028,16 @@ var VariableCompletionProvider = import_vscode5.languages.registerCompletionItem
     const keyInfo = getKeyInfomation(anyKeyString);
     const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
     if (!element) return;
-    const textBeforeCursor = document.getText(new import_vscode5.Range(new import_vscode5.Position(position.line, 0), position));
+    const textBeforeCursor = document.getText(new import_vscode7.Range(new import_vscode7.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
-    const range = dollarSignIndex >= 0 ? new import_vscode5.Range(new import_vscode5.Position(position.line, dollarSignIndex), position) : new import_vscode5.Range(position, position);
+    const range = dollarSignIndex >= 0 ? new import_vscode7.Range(new import_vscode7.Position(position.line, dollarSignIndex), position) : new import_vscode7.Range(position, position);
     return getVariableTree(element).map((x) => ({
       sortText: "!!!",
       label: x,
       insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
-      kind: import_vscode5.CompletionItemKind.Variable,
+      kind: import_vscode7.CompletionItemKind.Variable,
       range
     }));
   }
@@ -6963,33 +7048,34 @@ var providers = [
   ReferenceCompletionProvider,
   VariableCompletionProvider,
   ReferenceDeffenitionProvider,
-  ControlCompletionProvider
+  ControlCompletionProvider,
+  TextureDeffenitionProvider
 ];
 function registerProviders(context) {
   context.subscriptions.push(...providers);
 }
 
 // src/providers/jsonColorization.js
-var import_vscode6 = require("vscode");
+var import_vscode8 = require("vscode");
 function useColours() {
-  import_vscode6.workspace.onDidOpenTextDocument(() => {
-    if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId.includes("json")) {
-      colorizeJson(import_vscode6.window.activeTextEditor);
+  import_vscode8.workspace.onDidOpenTextDocument(() => {
+    if (import_vscode8.window.activeTextEditor && import_vscode8.window.activeTextEditor.document.languageId.includes("json")) {
+      colorizeJson(import_vscode8.window.activeTextEditor);
     }
   });
-  import_vscode6.window.onDidChangeActiveTextEditor((editor) => {
+  import_vscode8.window.onDidChangeActiveTextEditor((editor) => {
     if (editor && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
-  import_vscode6.workspace.onDidChangeTextDocument((event) => {
-    const editor = import_vscode6.window.activeTextEditor;
+  import_vscode8.workspace.onDidChangeTextDocument((event) => {
+    const editor = import_vscode8.window.activeTextEditor;
     if (editor && editor.document === event.document && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
-  if (import_vscode6.window.activeTextEditor && import_vscode6.window.activeTextEditor.document.languageId.includes("json")) {
-    colorizeJson(import_vscode6.window.activeTextEditor);
+  if (import_vscode8.window.activeTextEditor && import_vscode8.window.activeTextEditor.document.languageId.includes("json")) {
+    colorizeJson(import_vscode8.window.activeTextEditor);
   }
   function colorizeJson(editor) {
     const document = editor.document;
@@ -7030,7 +7116,7 @@ function useColours() {
         const endPos = document.positionAt(regex.lastIndex);
         matches[decoration.key] ??= [];
         matches[decoration.key].push({
-          range: new import_vscode6.Range(startPos, endPos),
+          range: new import_vscode8.Range(startPos, endPos),
           decoration
         });
       }
@@ -7043,10 +7129,11 @@ function useColours() {
 
 // src/extension.js
 function activate(context) {
-  const config = import_vscode7.workspace.getConfiguration("editor");
+  const config = import_vscode9.workspace.getConfiguration("editor");
   config.update("wordSeparators", "`~!@%^&*()-=+[{]}\\|;:'\",.<>/?");
   useColours();
   inizialize();
+  initializeTextures();
   registerProviders(context);
 }
 function deactivate() {

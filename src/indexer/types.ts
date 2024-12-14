@@ -12,3 +12,8 @@ interface JSONUIElement {
     elementMeta: ElementMeta
     isDummy?: boolean
 }
+
+interface TextureSlice {
+    texturePath?: string
+    slicePath?: string
+}
