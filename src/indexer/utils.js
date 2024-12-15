@@ -56,8 +56,8 @@ export function getVariableTree(element) {
     let arr = [];
 
     do {
-        arr.push(...element.elementMeta.variables)
-        currentElement = element.parentElement
+        arr.push(...currentElement.elementMeta.variables)
+        currentElement = currentElement.referencingElement
     } while (currentElement)
 
     return arr.concat(globalVariables)
@@ -67,6 +67,6 @@ export function getVariableTree(element) {
  * @param {string} fileContent
  */
 //Do it better yourself smh
-export function isProbablyJSONUI(fileContent){
+export function isProbablyJSONUI(fileContent) {
     return fileContent.includes("\"namespace\":")
 }

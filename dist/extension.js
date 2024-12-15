@@ -307,8 +307,8 @@ function getVariableTree(element) {
   let currentElement = element;
   let arr = [];
   do {
-    arr.push(...element.elementMeta.variables);
-    currentElement = element.parentElement;
+    arr.push(...currentElement.elementMeta.variables);
+    currentElement = currentElement.referencingElement;
   } while (currentElement);
   return arr.concat(globalVariables);
 }
@@ -7033,7 +7033,7 @@ var VariableCompletionProvider = import_vscode7.languages.registerCompletionItem
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
     const range = dollarSignIndex >= 0 ? new import_vscode7.Range(new import_vscode7.Position(position.line, dollarSignIndex), position) : new import_vscode7.Range(position, position);
-    return getVariableTree(element).map((x) => ({
+    return [...new Set(getVariableTree(element))].map((x) => ({
       sortText: "!!!",
       label: x,
       insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,

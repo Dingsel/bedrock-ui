@@ -41,7 +41,8 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
             : new Range(position, position);
 
 
-        return getVariableTree(element).map((x) => ({
+        //Maybe mark duplicate variables? (Like if they are global)
+        return [...new Set(getVariableTree(element))].map((x) => ({
             sortText: "!!!",
             label: x,
             insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
