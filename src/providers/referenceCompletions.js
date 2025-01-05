@@ -17,8 +17,9 @@ export const ReferenceCompletionProvider = languages.registerCompletionItemProvi
             `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0
         );
 
+        const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex(y => y.elementName === x.elementName) === i);
 
-        return filteredSuggestions.map(x => {
+        return uniqueSuggestions.map(x => {
             return {
                 label: `@${x.elementMeta.namespace}.${x.elementName}`,
                 kind: CompletionItemKind.Variable,
@@ -42,8 +43,9 @@ export const ControlCompletionProvider = languages.registerCompletionItemProvide
         if (symdex !== "\"") return
 
         const filteredSuggestions = totalElementsAutoCompletions.filter(x => x.elementMeta.controlSegments.length >= 1);
+        const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex(y => y.elementName === x.elementName) === i);
 
-        return filteredSuggestions.map(x => {
+        return uniqueSuggestions.map(x => {
             return {
                 label: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
                 kind: CompletionItemKind.Variable,

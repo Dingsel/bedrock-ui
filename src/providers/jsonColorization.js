@@ -41,6 +41,10 @@ export function useColours() {
                 decoration: namespaceDecoration
             },
             {
+                regex: /@[a-zA-Z0-9_]+.([a-zA-Z0-9_]+)/g,
+                decoration: elementDecoration
+            },
+            {
                 regex: /(?<=["\b])([\w\/]+)(?=@|\s*"\s*:\s*\{)/g,
                 decoration: elementDecoration
             },

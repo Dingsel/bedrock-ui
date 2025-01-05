@@ -12,3 +12,4 @@ src
 **/.vscode-test.*
 .env
 Bugrock-JSON-UI-Schemas/old_ui.schema.json
+Bugrock-JSON-UI-Schemas/README.md
