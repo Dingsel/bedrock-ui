@@ -6939,7 +6939,9 @@ var textureMap = /* @__PURE__ */ new Map();
 function getFileKey(string) {
   const arr = string.split(".");
   arr.pop();
-  return arr.join(".").replaceAll("\\", "/");
+  const fileComponents = arr.join(".").split(/\/|\\/);
+  const textureIndex = fileComponents.indexOf("textures");
+  return fileComponents.slice(textureIndex).join("/");
 }
 async function initializeTextures() {
   const pattern = `**/textures/**/*.{json,jsonc,json5,png,jpg}`;

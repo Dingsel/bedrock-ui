@@ -10,8 +10,10 @@ export const textureMap = new Map()
 function getFileKey(string) {
     const arr = string.split(".")
     arr.pop()
+    const fileComponents = arr.join(".").split(/\/|\\/)
+    const textureIndex = fileComponents.indexOf("textures")
 
-    return arr.join(".").replaceAll("\\", "/")
+    return fileComponents.slice(textureIndex).join("/")
 }
 
 export async function initializeTextures() {
