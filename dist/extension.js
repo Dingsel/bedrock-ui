@@ -6870,7 +6870,8 @@ var ReferenceCompletionProvider = import_vscode3.languages.registerCompletionIte
     const filteredSuggestions = totalElementsAutoCompletions.filter(
       (x) => `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0
     );
-    return filteredSuggestions.map((x) => {
+    const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex((y) => y.elementName === x.elementName) === i);
+    return uniqueSuggestions.map((x) => {
       return {
         label: `@${x.elementMeta.namespace}.${x.elementName}`,
         kind: import_vscode3.CompletionItemKind.Variable,
@@ -6891,7 +6892,8 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
     const symdex = textBeforeCursor.text[charIndex];
     if (symdex !== '"') return;
     const filteredSuggestions = totalElementsAutoCompletions.filter((x) => x.elementMeta.controlSegments.length >= 1);
-    return filteredSuggestions.map((x) => {
+    const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex((y) => y.elementName === x.elementName) === i);
+    return uniqueSuggestions.map((x) => {
       return {
         label: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
         kind: import_vscode3.CompletionItemKind.Variable,
