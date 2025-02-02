@@ -22,8 +22,8 @@ export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider
         if (!filePath) return;
 
         const fileLines = readFileSync(filePath).toString().split("\n")
-        const startLine = fileLines.findIndex(x => x.includes(`"${jsonElement.elementName}`))
-        const startChar = fileLines.find(x => x.includes(`"${jsonElement.elementName}`))?.indexOf("\"") ?? 0
+        const startLine = fileLines.findIndex(x => x.startsWith(`"${jsonElement.elementName}@`))
+        const startChar = fileLines.find(x => x.startsWith(`"${jsonElement.elementName}@`))?.indexOf("\"") ?? 0
 
         const startPosition = new Position(startLine !== -1 ? startLine : 0, startChar);
 

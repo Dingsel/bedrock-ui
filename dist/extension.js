@@ -6923,8 +6923,8 @@ var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionPr
     const { filePath } = meta;
     if (!filePath) return;
     const fileLines = (0, import_fs4.readFileSync)(filePath).toString().split("\n");
-    const startLine = fileLines.findIndex((x) => x.includes(`"${jsonElement.elementName}`));
-    const startChar = fileLines.find((x) => x.includes(`"${jsonElement.elementName}`))?.indexOf('"') ?? 0;
+    const startLine = fileLines.findIndex((x) => x.startsWith(`"${jsonElement.elementName}@`));
+    const startChar = fileLines.find((x) => x.startsWith(`"${jsonElement.elementName}@`))?.indexOf('"') ?? 0;
     const startPosition = new import_vscode4.Position(startLine !== -1 ? startLine : 0, startChar);
     return new import_vscode4.Location(import_vscode4.Uri.file(filePath), startPosition);
   }
