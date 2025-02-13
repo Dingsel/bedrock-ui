@@ -5,7 +5,6 @@ Bedrock UI is a tool to make it easier to develop JSON UI files for the Minecraf
 Goto references using f12 or ctrl click
 Variables autocompletions
 Additional highlighting of special string sequences
-Remove # and $ as word-breakers (allows whole selection of a word with a double click)
 
 ## Requirements
 The ui files need to be in a /ui/ wolder which should also be in your current workspace
@@ -19,6 +18,6 @@ Error reporting
 referencedBy on nested elements
 
 ## Atribution
-This project uses JSON UI Schemas from [KalmeMarq]()
+This project uses JSON UI Schemas from [KalmeMarq](https://github.com/KalmeMarq)
 
 **Enjoy!**

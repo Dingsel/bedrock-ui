@@ -245,7 +245,6 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var import_vscode9 = require("vscode");
 
 // src/providers/referenceCompletions.js
 var import_vscode3 = require("vscode");
@@ -6910,11 +6909,16 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
 // src/providers/referenceDeffenitions.js
 var import_vscode4 = require("vscode");
 var import_fs4 = require("fs");
+function isStringElement(searchString, elementName) {
+  console.log(searchString, elementName);
+  const trimmed = searchString.trim();
+  return trimmed.startsWith(`"${elementName}"`) || trimmed.startsWith(`"${elementName}@`);
+}
 var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
     const lineText = document.lineAt(position.line).text;
-    const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*:/;
+    const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*/;
     const match2 = jsonKeyPattern.exec(lineText.trim());
     if (match2 === null) return;
     const jsonElement = elementMap.get(`${[match2[3]]}@${[match2[2]]}`);
@@ -6923,8 +6927,8 @@ var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionPr
     const { filePath } = meta;
     if (!filePath) return;
     const fileLines = (0, import_fs4.readFileSync)(filePath).toString().split("\n");
-    const startLine = fileLines.findIndex((x) => x.startsWith(`"${jsonElement.elementName}@`));
-    const startChar = fileLines.find((x) => x.startsWith(`"${jsonElement.elementName}@`))?.indexOf('"') ?? 0;
+    const startLine = fileLines.findIndex((x) => isStringElement(x, jsonElement.elementName));
+    const startChar = fileLines.find((x) => isStringElement(x, jsonElement.elementName))?.indexOf('"') ?? 0;
     const startPosition = new import_vscode4.Position(startLine !== -1 ? startLine : 0, startChar);
     return new import_vscode4.Location(import_vscode4.Uri.file(filePath), startPosition);
   }
@@ -7137,8 +7141,6 @@ function useColours() {
 
 // src/extension.js
 function activate(context) {
-  const config = import_vscode9.workspace.getConfiguration("editor");
-  config.update("wordSeparators", "`~!@%^&*()-=+[{]}\\|;:'\",.<>/?");
   useColours();
   inizialize();
   initializeTextures();
