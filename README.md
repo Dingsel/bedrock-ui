@@ -7,7 +7,7 @@ Variables autocompletions
 Additional highlighting of special string sequences
 
 ## Requirements
-The ui files need to be in a /ui/ wolder which should also be in your current workspace
+The ui files need to be in a /ui/ folder which should also be in your current workspace
 
 ## Known Issues
 Trying to autocomplete variables sometimes makes the suggestion appear at the bottom
