@@ -6906,7 +6906,7 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
   }
 }, '"');
 
-// src/providers/referenceDeffenitions.js
+// src/providers/referenceDefinitions.js
 var import_vscode4 = require("vscode");
 var import_fs4 = require("fs");
 function isStringElement(searchString, elementName) {
@@ -6914,7 +6914,7 @@ function isStringElement(searchString, elementName) {
   const trimmed = searchString.trim();
   return trimmed.startsWith(`"${elementName}"`) || trimmed.startsWith(`"${elementName}@`);
 }
-var ReferenceDeffenitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
+var ReferenceDefinitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
     const lineText = document.lineAt(position.line).text;
@@ -6984,7 +6984,7 @@ function parseTexture(path2) {
 }
 
 // src/providers/textureCompletionLensProvider.js
-var TextureDeffenitionProvider = import_vscode6.languages.registerCompletionItemProvider(docInfo, {
+var TextureDefinitionProvider = import_vscode6.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     const line = document.lineAt(position.line).text;
     if (!isProbablyJSONUI(document.getText()) || !line.includes("texture")) return;
@@ -7055,9 +7055,9 @@ var VariableCompletionProvider = import_vscode7.languages.registerCompletionItem
 var providers = [
   ReferenceCompletionProvider,
   VariableCompletionProvider,
-  ReferenceDeffenitionProvider,
+  ReferenceDefinitionProvider,
   ControlCompletionProvider,
-  TextureDeffenitionProvider
+  TextureDefinitionProvider
 ];
 function registerProviders(context) {
   context.subscriptions.push(...providers);
@@ -7126,6 +7126,7 @@ function useColours() {
         const m = match2[2] || match2[1] || match2[0];
         const startPos = document.positionAt(regex.lastIndex - m.length);
         const endPos = document.positionAt(regex.lastIndex);
+        if (isInComment(document, document.offsetAt(startPos))) continue;
         matches[decoration.key] ??= [];
         matches[decoration.key].push({
           range: new import_vscode8.Range(startPos, endPos),
@@ -7137,6 +7138,18 @@ function useColours() {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
     });
   }
+}
+function isInComment(document, start) {
+  const line = document.lineAt(document.positionAt(start).line).text;
+  const lineCommentIndex = line.indexOf("//");
+  if (lineCommentIndex !== -1) {
+    const charPos = document.positionAt(start).character;
+    if (charPos >= lineCommentIndex) return true;
+  }
+  const beforeMatch = document.getText(new import_vscode8.Range(new import_vscode8.Position(0, 0), document.positionAt(start)));
+  const lastBlockStart = beforeMatch.lastIndexOf("/*");
+  const lastBlockEnd = beforeMatch.lastIndexOf("*/");
+  return lastBlockStart > lastBlockEnd;
 }
 
 // src/extension.js

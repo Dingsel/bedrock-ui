@@ -76,6 +76,8 @@ export function useColours() {
 
                 const startPos = document.positionAt(regex.lastIndex - m.length);
                 const endPos = document.positionAt(regex.lastIndex);
+                
+                if (isInComment(document, document.offsetAt(startPos))) continue;
 
                 matches[decoration.key] ??= []
 
@@ -89,4 +91,25 @@ export function useColours() {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
         })
     }
+}
+
+/**
+ * @param {import('vscode').TextDocument} document
+ * @param {number} start
+ * @returns {boolean}
+ */
+function isInComment(document, start) {
+    // JSONC comments start with // or /* ... */
+    // Check if the match is inside a line comment
+    const line = document.lineAt(document.positionAt(start).line).text;
+    const lineCommentIndex = line.indexOf('//');
+    if (lineCommentIndex !== -1) {
+        const charPos = document.positionAt(start).character;
+        if (charPos >= lineCommentIndex) return true;
+    }
+    // Check block comment (/* ... */)
+    const beforeMatch = document.getText(new Range(new Position(0,0), document.positionAt(start)));
+    const lastBlockStart = beforeMatch.lastIndexOf('/*');
+    const lastBlockEnd = beforeMatch.lastIndexOf('*/');
+    return lastBlockStart > lastBlockEnd;
 }
