@@ -15,7 +15,7 @@ function isStringElement(searchString, elementName) {
         trimmed.startsWith(`"${elementName}@`)
 }
 
-export const ReferenceDeffenitionProvider = languages.registerDefinitionProvider(docInfo, {
+export const ReferenceDefinitionProvider = languages.registerDefinitionProvider(docInfo, {
     provideDefinition(document, position) {
         if (!isProbablyJSONUI(document.getText())) return
         const lineText = document.lineAt(position.line).text;
