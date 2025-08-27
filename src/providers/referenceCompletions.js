@@ -15,6 +15,7 @@ export const ReferenceCompletionProvider = languages.registerCompletionItemProvi
 
         const filteredSuggestions = totalElementsAutoCompletions.filter(x =>
             `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0
+            && !x.elementName.startsWith("$")
         );
 
         const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex(y => y.elementName === x.elementName) === i);
