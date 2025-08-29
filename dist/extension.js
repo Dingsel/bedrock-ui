@@ -164,7 +164,7 @@ var require_brace_expansion = __commonJS({
         var isSequence = isNumericSequence || isAlphaSequence;
         var isOptions = m.body.indexOf(",") >= 0;
         if (!isSequence && !isOptions) {
-          if (m.post.match(/,.*\}/)) {
+          if (m.post.match(/,(?!,).*\}/)) {
             str = m.pre + "{" + m.body + escClose + m.post;
             return expand2(str);
           }
@@ -312,28 +312,28 @@ function getKeyInfomation(key) {
 }
 function getVariableTree(element) {
   let currentElement = element;
-  let arr = [];
-  do {
+  const variableMap = /* @__PURE__ */ new Map();
+  while (currentElement) {
     for (let newVar of currentElement.elementMeta.variables) {
-      let v;
-      if (v = arr.find((x) => x.name == newVar.name)) {
-        v.overridesAncestors ??= [];
-        v.overridesAncestors.push(currentElement.elementName);
-      } else {
-        arr.push(newVar);
+      const existing = variableMap.get(newVar.name);
+      if (existing) {
+        existing.overridesAncestors ??= [];
+        existing.overridesAncestors.push(currentElement.elementName);
+        continue;
       }
+      variableMap.set(newVar.name, newVar);
     }
     currentElement = currentElement.referencingElement;
-  } while (currentElement);
-  for (let globalVar of globalVariables) {
-    let v;
-    if (v = arr.find((x) => x.name == globalVar.name)) {
-      v.overridesGlobal = true;
-    } else {
-      arr.push(globalVar);
-    }
   }
-  return arr;
+  for (const globalVar of globalVariables) {
+    const existing = variableMap.get(globalVar.name);
+    if (existing) {
+      existing.overridesGlobal = true;
+      continue;
+    }
+    variableMap.set(globalVar.name, globalVar);
+  }
+  return Array.from(variableMap.values());
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
@@ -6967,7 +6967,7 @@ var ReferenceCompletionProvider = import_vscode4.languages.registerCompletionIte
     const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex((y) => y.elementName === x.elementName) === i);
     const currentNamespace = getCurrentNamespace(document.getText());
     return uniqueSuggestions.map((x) => {
-      const label = `@${x.elementMeta.namespace != currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
+      const label = `@${x.elementMeta.namespace !== currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
       return {
         label,
         kind: import_vscode4.CompletionItemKind.Variable,

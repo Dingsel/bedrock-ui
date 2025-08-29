@@ -72,6 +72,7 @@ export function useColours() {
                 });
             }
         });
+        
         if (removeOldDecorations) {
             let oldDecoration;
             while (oldDecoration = oldDecorations.pop()) {
@@ -80,6 +81,7 @@ export function useColours() {
         } else {
             oldDecorations = [];
         }
+
         Object.entries(matches).forEach(([, arr]) => {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
             oldDecorations.push(arr[0].decoration);

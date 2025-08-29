@@ -23,7 +23,7 @@ export const ReferenceCompletionProvider = languages.registerCompletionItemProvi
         const currentNamespace = getCurrentNamespace(document.getText());
 
         return uniqueSuggestions.map(x => {
-            const label = `@${x.elementMeta.namespace != currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
+            const label = `@${x.elementMeta.namespace !== currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
             return {
                 label,
                 kind: CompletionItemKind.Variable,
