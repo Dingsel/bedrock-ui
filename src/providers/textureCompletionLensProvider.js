@@ -3,7 +3,7 @@ import { docInfo } from "../global";
 import { isProbablyJSONUI } from "../indexer/utils";
 import { textureMap } from "../indexer/texureDataProvider";
 
-export const TextureDeffenitionProvider = languages.registerCompletionItemProvider(docInfo, {
+export const TextureDefinitionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
         const line = document.lineAt(position.line).text;
         if (

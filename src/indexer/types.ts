@@ -1,8 +1,14 @@
 interface ElementMeta {
     filePath: string | undefined
     namespace: string
-    variables: string[]
+    variables: Variable[]
     controlSegments: string[]
+}
+
+interface Variable {
+    name: string
+    defaultValue: any
+    isGlobal?: boolean
 }
 
 interface JSONUIElement {

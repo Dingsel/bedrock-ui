@@ -2,6 +2,7 @@ import globals from "globals";
 
 export default [{
     files: ["**/*.js"],
+    ignores: ["dist/**"],
     languageOptions: {
         globals: {
             ...globals.commonjs,

@@ -1,19 +1,43 @@
-import { window } from "vscode";
+import { window, workspace } from "vscode";
+import { getTokenColorsForTheme } from "./indexer/utils.js";
 
-export const namespaceDecoration = window.createTextEditorDecorationType({
-    color: '#44C9B0',
-});
+const namespaceToken = "entity.name.class";
+const elementToken = "variable.other.constant";
+const variableToken = "entity.name.function";
+const bindingToken = "entity.name.operator";
 
-export const elementDecoration = window.createTextEditorDecorationType({
-    color: '#4FC1FF',
-});
+/** @type {TextEditorDecorationType} */
+export let namespaceDecoration;
 
-export const variableDecoration = window.createTextEditorDecorationType({
-    color: '#DCDC9D',
-});
+/** @type {TextEditorDecorationType} */
+export let elementDecoration;
 
-export const bindingDecoration = window.createTextEditorDecorationType({
-    color: '#C66969',
-});
+/** @type {TextEditorDecorationType} */
+export let variableDecoration;
+
+/** @type {TextEditorDecorationType} */
+export let bindingDecoration;
+
+createDecorations();
+
+export function createDecorations() {
+    const themeName = workspace.getConfiguration("workbench").get("colorTheme");
+    const tokenColors = getTokenColorsForTheme(themeName);
+    
+    namespaceDecoration = window.createTextEditorDecorationType({
+        color: tokenColors(namespaceToken)?.foreground ?? "#4EC9B0",
+    });
+    elementDecoration = window.createTextEditorDecorationType({
+        color: tokenColors(elementToken)?.foreground ?? "#4FC1FF",
+    });
+    variableDecoration = window.createTextEditorDecorationType({
+        color: tokenColors(variableToken)?.foreground ?? "#DCDCAA",
+    });
+    bindingDecoration = window.createTextEditorDecorationType({
+        color: tokenColors(bindingToken)?.foreground ?? "#C586C0",
+    });
+}
 
 export const docInfo = ["json", "jsonc", "json5"]
+
+/** @import { TextEditorDecorationType } from "vscode" */

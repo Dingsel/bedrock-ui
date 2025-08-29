@@ -1,7 +1,8 @@
-import { CompletionItemKind, languages, Position, Range } from "vscode";
+import { CompletionItemKind, languages, MarkdownString, Position, Range } from "vscode";
 import { elementMap } from "../indexer/parseFile";
-import { getKeyInfomation, getVariableTree, isProbablyJSONUI } from "../indexer/utils";
+import { getCurrentNamespace, getKeyInfomation, getVariableTree, isProbablyJSONUI } from "../indexer/utils";
 import { docInfo } from "../global";
+import { globalVariables } from "../indexer/globalVariables.js";
 
 export const VariableCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
@@ -24,12 +25,14 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
         }
 
         const anyKeyString = findPatternUpwards();
-
         if (!anyKeyString) return;
         const keyInfo = getKeyInfomation(anyKeyString)
-        const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
-
-        if (!element) return;
+        // console.log("VariableCompletionProvider: Found key info:", keyInfo);
+        const elementKey = `${keyInfo.targetReference}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
+        // console.log("VariableCompletionProvider: Found element key:", elementKey);
+        const element = elementMap.get(elementKey);
+        // console.log("VariableCompletionProvider: Found element:", element, [...elementMap.entries()]);
+        const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
 
         const textBeforeCursor = document.getText(new Range(new Position(position.line, 0), position));
         const dollarSignIndex = textBeforeCursor.lastIndexOf('$');
@@ -42,12 +45,19 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
 
 
         //Maybe mark duplicate variables? (Like if they are global)
-        return [...new Set(getVariableTree(element))].map((x) => ({
-            sortText: "!!!",
-            label: x,
-            insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
-            kind: CompletionItemKind.Variable,
-            range
-        }));
+        return variables.map(({ name, defaultValue, isGlobal }) => {
+            let documentation;
+            if (defaultValue != undefined) {
+                documentation = `${isGlobal ? "Global variable" : "Default"}: \`${typeof defaultValue == "string" ? `"${defaultValue}"` : defaultValue}\``;
+            }
+            return {
+                sortText: "!!!",
+                label: name,
+                documentation: documentation && new MarkdownString(documentation),
+                insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? name : `"${name}": `,
+                kind: CompletionItemKind.Variable,
+                range
+            };
+        });
     }
 }, "$")

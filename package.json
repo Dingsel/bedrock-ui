@@ -1,13 +1,13 @@
 {
     "name": "bedrock-ui",
-    "displayName": "bedrock-ui",
+    "displayName": "Bedrock UI",
     "description": "",
     "publisher": "Dingsel",
     "icon": "./UIX.png",
     "repository": {
         "url": "https://github.com/Dingsel/bedrock-ui"
     },
-    "version": "0.0.16",
+    "version": "0.0.17",
     "engines": {
         "vscode": "^1.95.0"
     },
@@ -59,11 +59,9 @@
         ]
     },
     "scripts": {
-        "lint": "eslint .",
-        "pretest": "npm run lint",
+        "lint": "eslint . && tsc",
         "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node",
         "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node --watch",
-        "test": "vscode-test",
         "package": "vsce package",
         "publish": "vsce publish"
     },
@@ -74,8 +72,8 @@
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^3.2.1",
-        "eslint": "^9.13.0",
-        "esbuild": "^0.24.0"
+        "esbuild": "^0.25.9",
+        "eslint": "^9.13.0"
     },
     "dependencies": {
         "glob": "^11.0.0"

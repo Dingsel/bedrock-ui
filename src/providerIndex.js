@@ -1,14 +1,14 @@
 import { ControlCompletionProvider, ReferenceCompletionProvider } from "./providers/referenceCompletions";
-import { ReferenceDeffenitionProvider } from "./providers/referenceDeffenitions";
-import { TextureDeffenitionProvider } from "./providers/textureCompletionLensProvider";
+import { ReferenceDefinitionProvider } from "./providers/referenceDefinitions";
+import { TextureDefinitionProvider } from "./providers/textureCompletionLensProvider";
 import { VariableCompletionProvider } from "./providers/variableCompletions";
 
 const providers = [
     ReferenceCompletionProvider,
     VariableCompletionProvider,
-    ReferenceDeffenitionProvider,
+    ReferenceDefinitionProvider,
     ControlCompletionProvider,
-    TextureDeffenitionProvider
+    TextureDefinitionProvider
 ]
 
 /**
