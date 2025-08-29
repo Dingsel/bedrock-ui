@@ -258,14 +258,18 @@ var import_fs2 = require("fs");
 // src/indexer/utils.js
 var import_vscode = require("vscode");
 
-// src/indexer/glovalVariables.js
+// src/indexer/globalVariables.js
 var import_fs = require("fs");
 var globalVariables = [];
 function parseGlobalVarsFromFilePath(filePath) {
   const fileString = removeComments((0, import_fs.readFileSync)(filePath).toString());
   try {
     const json = JSON.parse(fileString);
-    globalVariables = Object.keys(json).filter((x) => x.startsWith("$"));
+    globalVariables = Object.entries(json).filter(([key]) => key.startsWith("$")).map(([name, defaultValue]) => ({
+      name,
+      defaultValue,
+      isGlobal: true
+    }));
   } catch (error) {
     console.warn("Failed to parse global variables", error);
   }
@@ -317,6 +321,14 @@ function getVariableTree(element) {
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
+}
+function getCurrentNamespace(jsonContent) {
+  try {
+    const json = JSON.parse(removeComments(jsonContent));
+    return json.namespace;
+  } catch {
+    return jsonContent.match(/(?<="namespace"\s*:\s+")(.+?)"/)?.[1] ?? "";
+  }
 }
 function getTokenColorsForTheme(themeName) {
   const tokenColors = /* @__PURE__ */ new Map();
@@ -398,7 +410,10 @@ function traverseKeys(key, element, objectMeta, parentElement = void 0) {
       referencingElement: getReferenceElementByKey(keyInfo, objectMeta.namespace, objectMeta.controlSegments)
     }
   );
-  const variables = Object.keys(element).filter((x) => x.startsWith("$")).map((x) => x.split("|", 2)[0]);
+  const variables = Object.entries(element).filter(([key2]) => key2.startsWith("$")).map(([key2, value]) => ({
+    name: key2.split("|")[0],
+    defaultValue: key2.split("|")[1] == "default" ? value : void 0
+  }));
   const elementMeta = { ...objectMeta, variables };
   jsonUIELement.elementMeta = elementMeta;
   jsonUIELement.isDummy = false;
@@ -6979,10 +6994,6 @@ function isStringElement(searchString, elementName) {
   const trimmed = searchString.trim();
   return trimmed.startsWith(`"${elementName}"`) || trimmed.startsWith(`"${elementName}@`);
 }
-function getCurrentNamespace(jsonContent) {
-  const json = JSON.parse(removeComments(jsonContent));
-  return json.namespace;
-}
 function getReferenceKey(reference, currentNamespace) {
   if (reference.includes(".")) {
     const dotI = reference.indexOf(".");
@@ -7158,20 +7169,28 @@ var VariableCompletionProvider = import_vscode8.languages.registerCompletionItem
     const anyKeyString = findPatternUpwards();
     if (!anyKeyString) return;
     const keyInfo = getKeyInfomation(anyKeyString);
-    const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
-    if (!element) return;
+    const elementKey = `${keyInfo.elementName}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
+    const element = elementMap.get(elementKey);
+    const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
     const textBeforeCursor = document.getText(new import_vscode8.Range(new import_vscode8.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
     const range = dollarSignIndex >= 0 ? new import_vscode8.Range(new import_vscode8.Position(position.line, dollarSignIndex), position) : new import_vscode8.Range(position, position);
-    return [...new Set(getVariableTree(element))].map((x) => ({
-      sortText: "!!!",
-      label: x,
-      insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
-      kind: import_vscode8.CompletionItemKind.Variable,
-      range
-    }));
+    return variables.map(({ name, defaultValue, isGlobal }) => {
+      let documentation;
+      if (defaultValue != void 0) {
+        documentation = `${isGlobal ? "Global variable" : "Default"}: \`${typeof defaultValue == "string" ? `"${defaultValue}"` : defaultValue}\``;
+      }
+      return {
+        sortText: "!!!",
+        label: name,
+        documentation: documentation && new import_vscode8.MarkdownString(documentation),
+        insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? name : `"${name}": `,
+        kind: import_vscode8.CompletionItemKind.Variable,
+        range
+      };
+    });
   }
 }, "$");
 
@@ -7221,37 +7240,13 @@ function useColours() {
   function colorizeJson(editor) {
     const document = editor.document;
     const text = document.getText();
-    if (!isProbablyJSONUI(text)) return;
+    const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
+    if (!isGlobalVariables && !isProbablyJSONUI(text)) return;
     let oldDecoration;
     while (oldDecoration = oldDecorations.pop()) {
       editor.setDecorations(oldDecoration, []);
     }
-    const syntaxes = [
-      {
-        regex: /(?<=@)[^.\s]+(?=\.)/g,
-        decoration: namespaceDecoration
-      },
-      {
-        regex: /(?<!\$)(?<="|\b)(\w+(\/\w+)*)(?=@|\s*"\s*:\s*\{)/g,
-        decoration: elementDecoration
-      },
-      {
-        regex: /(?<=@[^.\s]+\.)\w+(?=\")/g,
-        decoration: elementDecoration
-      },
-      {
-        regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
-        decoration: namespaceDecoration
-      },
-      {
-        regex: /(\$[\w_|]+)/g,
-        decoration: variableDecoration
-      },
-      {
-        regex: /(#[\w_]+)/g,
-        decoration: bindingDecoration
-      }
-    ];
+    const syntaxes = getSyntaxes(isGlobalVariables);
     const matches = {};
     syntaxes.forEach(({ regex, decoration }) => {
       let match2;
@@ -7272,6 +7267,37 @@ function useColours() {
       oldDecorations.push(arr[0].decoration);
     });
   }
+}
+function getSyntaxes(isGlobalVariables) {
+  let syntaxes = [{
+    regex: /(\$[\w_|]+)/g,
+    decoration: variableDecoration
+  }];
+  if (!isGlobalVariables) {
+    syntaxes.push(
+      {
+        regex: /(?<=@)[^.\s]+(?=\.)/g,
+        decoration: namespaceDecoration
+      },
+      {
+        regex: /(?<!\$)(?<="|\b)(\w+(\/\w+)*)(?=@|\s*"\s*:\s*\{)/g,
+        decoration: elementDecoration
+      },
+      {
+        regex: /(?<=@[^.\s]+\.)\w+(?=\")/g,
+        decoration: elementDecoration
+      },
+      {
+        regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
+        decoration: namespaceDecoration
+      },
+      {
+        regex: /(#[\w_]+)/g,
+        decoration: bindingDecoration
+      }
+    );
+  }
+  return syntaxes;
 }
 function isInComment(document, start) {
   const line = document.lineAt(document.positionAt(start).line).text;

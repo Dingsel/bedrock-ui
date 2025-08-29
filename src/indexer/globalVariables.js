@@ -2,7 +2,7 @@ import { readFileSync } from "fs"
 import { removeComments } from "./utils"
 
 /**
- * @type {string[]}
+ * @type {Variable[]}
  */
 export let globalVariables = []
 
@@ -14,7 +14,11 @@ export function parseGlobalVarsFromFilePath(filePath) {
 
     try {
         const json = JSON.parse(fileString)
-        globalVariables = Object.keys(json).filter(x => x.startsWith("$"))
+        globalVariables = Object.entries(json).filter(([key]) => key.startsWith("$")).map(([name, defaultValue]) => ({
+            name,
+            defaultValue,
+            isGlobal: true
+        }));
     } catch (error) {
         console.warn("Failed to parse global variables", error)
     }

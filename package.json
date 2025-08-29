@@ -59,7 +59,7 @@
         ]
     },
     "scripts": {
-        "lint": "eslint .",
+        "lint": "eslint . && tsc",
         "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node",
         "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node --watch",
         "package": "vsce package",

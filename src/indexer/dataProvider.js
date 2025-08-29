@@ -2,7 +2,7 @@ import { workspace } from "vscode"
 import { elementMap, parseFilePath } from "./parseFile"
 import { join } from "path"
 import { glob } from "glob"
-import { parseGlobalVarsFromFilePath } from "./glovalVariables"
+import { parseGlobalVarsFromFilePath } from "./globalVariables"
 
 /**
  * @type {JSONUIElement[]}

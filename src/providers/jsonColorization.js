@@ -44,40 +44,16 @@ export function useColours() {
     function colorizeJson(editor) {
         const document = editor.document;
         const text = document.getText();
+        const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
 
-        if (!isProbablyJSONUI(text)) return
+        if (!isGlobalVariables && !isProbablyJSONUI(text)) return
         
         let oldDecoration;
         while (oldDecoration = oldDecorations.pop()) {
             editor.setDecorations(oldDecoration, []);
         }
 
-        const syntaxes = [
-            {
-                regex: /(?<=@)[^.\s]+(?=\.)/g,
-                decoration: namespaceDecoration
-            },
-            {
-                regex: /(?<!\$)(?<="|\b)(\w+(\/\w+)*)(?=@|\s*"\s*:\s*\{)/g,
-                decoration: elementDecoration
-            },
-            {
-                regex: /(?<=@[^.\s]+\.)\w+(?=\")/g,
-                decoration: elementDecoration
-            },
-            {
-                regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
-                decoration: namespaceDecoration
-            },
-            {
-                regex: /(\$[\w_|]+)/g,
-                decoration: variableDecoration
-            },
-            {
-                regex: /(#[\w_]+)/g,
-                decoration: bindingDecoration
-            }
-        ];
+        const syntaxes = getSyntaxes(isGlobalVariables);
 
         /**@type {{[key : string]: {range: Range, decoration: import("vscode").TextEditorDecorationType}[]}}*/
         const matches = {};
@@ -105,6 +81,43 @@ export function useColours() {
             oldDecorations.push(arr[0].decoration);
         })
     }
+}
+
+/**
+ * @param {boolean} isGlobalVariables
+ * @returns {{ regex: RegExp, decoration: TextEditorDecorationType }[]}
+ */
+function getSyntaxes(isGlobalVariables) {
+    let syntaxes = [{
+        regex: /(\$[\w_|]+)/g,
+        decoration: variableDecoration
+    }];
+    if(!isGlobalVariables) {
+        syntaxes.push(
+            {
+                regex: /(?<=@)[^.\s]+(?=\.)/g,
+                decoration: namespaceDecoration
+            },
+            {
+                regex: /(?<!\$)(?<="|\b)(\w+(\/\w+)*)(?=@|\s*"\s*:\s*\{)/g,
+                decoration: elementDecoration
+            },
+            {
+                regex: /(?<=@[^.\s]+\.)\w+(?=\")/g,
+                decoration: elementDecoration
+            },
+            {
+                regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
+                decoration: namespaceDecoration
+            },
+            
+            {
+                regex: /(#[\w_]+)/g,
+                decoration: bindingDecoration
+            }
+        );
+    }
+    return syntaxes;
 }
 
 /**

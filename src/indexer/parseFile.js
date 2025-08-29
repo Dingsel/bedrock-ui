@@ -48,8 +48,12 @@ function traverseKeys(key, element, objectMeta, parentElement = undefined) {
         parentElement,
         referencingElement: getReferenceElementByKey(keyInfo, objectMeta.namespace, objectMeta.controlSegments)
     })
-
-    const variables = Object.keys(element).filter(x => x.startsWith("$")).map(x => x.split("|", 2)[0])
+    
+    /** @type {Variable[]} */
+    const variables = Object.entries(element).filter(([key]) => key.startsWith("$")).map(([key, value]) => ({
+        name: key.split("|")[0],
+        defaultValue: key.split("|")[1] == "default"? value : undefined
+    }));
     const elementMeta = { ...objectMeta, variables }
     jsonUIELement.elementMeta = elementMeta
 

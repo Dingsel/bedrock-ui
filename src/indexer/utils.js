@@ -1,5 +1,5 @@
 import { extensions } from "vscode";
-import { globalVariables } from "./glovalVariables";
+import { globalVariables } from "./globalVariables";
 import path from "node:path";
 
 /**
@@ -51,6 +51,7 @@ export function getKeyInfomation(key) {
 /**
  * 
  * @param {JSONUIElement} element 
+ * @returns {Variable[]}
  */
 export function getVariableTree(element) {
     /**@type {JSONUIElement | undefined} */
@@ -71,6 +72,20 @@ export function getVariableTree(element) {
 //Do it better yourself smh
 export function isProbablyJSONUI(fileContent) {
     return fileContent.includes("\"namespace\":")
+}
+
+/**
+ * Extract the namespace from the JSON content
+ * @param {string} jsonContent 
+ * @returns {string}
+ */
+export function getCurrentNamespace(jsonContent) {
+    try {
+        const json = JSON.parse(removeComments(jsonContent));
+        return json.namespace;
+    } catch {
+        return jsonContent.match(/(?<="namespace"\s*:\s+")(.+?)"/)?.[1] ?? "";
+    }
 }
 
 /**

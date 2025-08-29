@@ -2,7 +2,7 @@ import { languages, Position, Range, Uri } from "vscode";
 import { readFileSync, existsSync } from "fs";
 import { elementMap } from "../indexer/parseFile";
 import { docInfo } from "../global";
-import { isProbablyJSONUI, removeComments } from "../indexer/utils";
+import { getCurrentNamespace, isProbablyJSONUI } from "../indexer/utils";
 
 /**
  * @param {string} searchString
@@ -14,15 +14,6 @@ function isStringElement(searchString, elementName) {
         trimmed.startsWith(`"${elementName}@`)
 }
 
-/**
- * Extract the namespace from the JSON content
- * @param {string} jsonContent 
- * @returns {string}
- */
-function getCurrentNamespace(jsonContent) {
-    const json = JSON.parse(removeComments(jsonContent));
-    return json.namespace;
-}
 /**
  * @param {string} reference
  * @param {string} currentNamespace
