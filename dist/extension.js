@@ -164,7 +164,7 @@ var require_brace_expansion = __commonJS({
         var isSequence = isNumericSequence || isAlphaSequence;
         var isOptions = m.body.indexOf(",") >= 0;
         if (!isSequence && !isOptions) {
-          if (m.post.match(/,(?!,).*\}/)) {
+          if (m.post.match(/,.*\}/)) {
             str = m.pre + "{" + m.body + escClose + m.post;
             return expand2(str);
           }
@@ -314,10 +314,26 @@ function getVariableTree(element) {
   let currentElement = element;
   let arr = [];
   do {
-    arr.push(...currentElement.elementMeta.variables);
+    for (let newVar of currentElement.elementMeta.variables) {
+      let v;
+      if (v = arr.find((x) => x.name == newVar.name)) {
+        v.overridesAncestors ??= [];
+        v.overridesAncestors.push(currentElement.elementName);
+      } else {
+        arr.push(newVar);
+      }
+    }
     currentElement = currentElement.referencingElement;
   } while (currentElement);
-  return arr.concat(globalVariables);
+  for (let globalVar of globalVariables) {
+    let v;
+    if (v = arr.find((x) => x.name == globalVar.name)) {
+      v.overridesGlobal = true;
+    } else {
+      arr.push(globalVar);
+    }
+  }
+  return arr;
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
@@ -7169,21 +7185,29 @@ var VariableCompletionProvider = import_vscode8.languages.registerCompletionItem
     const keyInfo = getKeyInfomation(anyKeyString);
     const elementKey = `${keyInfo.targetReference}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
     const element = elementMap.get(elementKey);
-    const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
+    const variables = element ? getVariableTree(element) : globalVariables;
     const textBeforeCursor = document.getText(new import_vscode8.Range(new import_vscode8.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
     const range = dollarSignIndex >= 0 ? new import_vscode8.Range(new import_vscode8.Position(position.line, dollarSignIndex), position) : new import_vscode8.Range(position, position);
-    return variables.map(({ name, defaultValue, isGlobal }) => {
-      let documentation;
+    return variables.map(({ name, defaultValue, isGlobal, overridesGlobal, overridesAncestors }) => {
+      let documentation = "";
       if (defaultValue != void 0) {
         documentation = `${isGlobal ? "Global variable" : "Default"}: \`${typeof defaultValue == "string" ? `"${defaultValue}"` : defaultValue}\``;
       }
+      if (overridesGlobal) {
+        documentation += "\n\n*This variable overrides a global variable with the same name.*";
+      }
+      overridesAncestors?.forEach((ancestor) => {
+        documentation += `
+
+*This variable overrides one with the same name in \`${ancestor}\`*.`;
+      });
       return {
         sortText: "!!!",
         label: name,
-        documentation: documentation && new import_vscode8.MarkdownString(documentation),
+        documentation: documentation ? new import_vscode8.MarkdownString(documentation) : void 0,
         insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? name : `"${name}": `,
         kind: import_vscode8.CompletionItemKind.Variable,
         range

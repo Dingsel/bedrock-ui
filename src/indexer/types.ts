@@ -9,6 +9,8 @@ interface Variable {
     name: string
     defaultValue: any
     isGlobal?: boolean
+    overridesGlobal?: boolean
+    overridesAncestors?: string[]
 }
 
 interface JSONUIElement {
