@@ -7230,6 +7230,7 @@ function registerProviders(context) {
 
 // src/providers/jsonColorization.js
 var import_vscode9 = require("vscode");
+var oldDecorations = [];
 function useColours() {
   import_vscode9.workspace.onDidOpenTextDocument(() => {
     if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
@@ -7251,14 +7252,14 @@ function useColours() {
     if (event.affectsConfiguration("workbench.colorTheme")) {
       createDecorations();
       if (import_vscode9.window.activeTextEditor?.document?.languageId?.includes("json")) {
-        colorizeJson(import_vscode9.window.activeTextEditor);
+        colorizeJson(import_vscode9.window.activeTextEditor, true);
       }
     }
   });
   if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
     colorizeJson(import_vscode9.window.activeTextEditor);
   }
-  function colorizeJson(editor) {
+  function colorizeJson(editor, removeOldDecorations = false) {
     const document = editor.document;
     const text = document.getText();
     const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
@@ -7279,8 +7280,17 @@ function useColours() {
         });
       }
     });
+    if (removeOldDecorations) {
+      let oldDecoration;
+      while (oldDecoration = oldDecorations.pop()) {
+        editor.setDecorations(oldDecoration, []);
+      }
+    } else {
+      oldDecorations = [];
+    }
     Object.entries(matches).forEach(([, arr]) => {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
+      oldDecorations.push(arr[0].decoration);
     });
   }
 }

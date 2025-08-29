@@ -2,8 +2,8 @@ import { Position, Range, window, workspace } from "vscode";
 import { bindingDecoration, createDecorations, elementDecoration, namespaceDecoration, variableDecoration } from "../global";
 import { isProbablyJSONUI } from "../indexer/utils";
 
-// /** @type {TextEditorDecorationType[]} */
-// let oldDecorations = [];
+/** @type {TextEditorDecorationType[]} */
+let oldDecorations = [];
 
 export function useColours() {
     workspace.onDidOpenTextDocument(() => {
@@ -29,7 +29,7 @@ export function useColours() {
         if (event.affectsConfiguration('workbench.colorTheme')) {
             createDecorations();
             if (window.activeTextEditor?.document?.languageId?.includes('json')) {
-                colorizeJson(window.activeTextEditor);
+                colorizeJson(window.activeTextEditor, true);
             }
         }
     });
@@ -40,18 +40,14 @@ export function useColours() {
 
     /**
      * @param {import("vscode").TextEditor} editor
+     * @param {boolean} [removeOldDecorations] This should be true when re-colorizing when the document hasn't changed, e.g. changing theme
      */
-    function colorizeJson(editor) {
+    function colorizeJson(editor, removeOldDecorations = false) {
         const document = editor.document;
         const text = document.getText();
         const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
 
         if (!isGlobalVariables && !isProbablyJSONUI(text)) return
-
-        // let oldDecoration;
-        // while (oldDecoration = oldDecorations.pop()) {
-        //     editor.setDecorations(oldDecoration, []);
-        // }
 
         const syntaxes = getSyntaxes(isGlobalVariables);
 
@@ -76,9 +72,17 @@ export function useColours() {
                 });
             }
         });
+        if (removeOldDecorations) {
+            let oldDecoration;
+            while (oldDecoration = oldDecorations.pop()) {
+                editor.setDecorations(oldDecoration, []);
+            }
+        } else {
+            oldDecorations = [];
+        }
         Object.entries(matches).forEach(([, arr]) => {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
-            // oldDecorations.push(arr[0].decoration);
+            oldDecorations.push(arr[0].decoration);
         })
     }
 }
