@@ -6910,29 +6910,102 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
 var import_vscode4 = require("vscode");
 var import_fs4 = require("fs");
 function isStringElement(searchString, elementName) {
-  console.log(searchString, elementName);
   const trimmed = searchString.trim();
   return trimmed.startsWith(`"${elementName}"`) || trimmed.startsWith(`"${elementName}@`);
 }
+function getCurrentNamespace(jsonContent) {
+  const json = JSON.parse(removeComments(jsonContent));
+  return json.namespace;
+}
+function getReferenceKey(reference, currentNamespace) {
+  if (reference.includes(".")) {
+    const dotI = reference.indexOf(".");
+    return `${reference.slice(dotI + 1)}@${reference.slice(0, dotI)}`;
+  }
+  return `${reference}@${currentNamespace}`;
+}
 var ReferenceDefinitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
-    if (!isProbablyJSONUI(document.getText())) return;
+    console.log("ReferenceDefinitions: Provider called for document:", document.uri.fsPath);
+    console.log("ReferenceDefinitions: Position:", position);
+    if (!isProbablyJSONUI(document.getText())) {
+      console.log("ReferenceDefinitions: Document is not JSON UI");
+      return;
+    }
     const lineText = document.lineAt(position.line).text;
-    const jsonKeyPattern = /"([\w-]+)@([\w-]+)\.([\w-]+)"\s*/;
-    const match2 = jsonKeyPattern.exec(lineText.trim());
-    if (match2 === null) return;
-    const jsonElement = elementMap.get(`${[match2[3]]}@${[match2[2]]}`);
-    const meta = jsonElement?.elementMeta;
-    if (!meta) return;
+    console.log("ReferenceDefinitions: Processing line:", lineText);
+    const cursorChar = position.character;
+    const atIndex = lineText.indexOf("@");
+    if (atIndex === -1 || cursorChar <= atIndex) {
+      console.log("ReferenceDefinitions: Cursor not positioned on reference part");
+      return;
+    }
+    const afterAt = lineText.substring(atIndex + 1);
+    const quoteEndIndex = afterAt.indexOf('"');
+    if (quoteEndIndex === -1) {
+      console.log("ReferenceDefinitions: No closing quote found after @");
+      return;
+    }
+    const reference = afterAt.substring(0, quoteEndIndex);
+    console.log("ReferenceDefinitions: Extracted reference:", reference);
+    const currentNamespace = getCurrentNamespace(document.getText());
+    const referenceKey = getReferenceKey(reference, currentNamespace);
+    console.log("ReferenceDefinitions: Looking for key:", referenceKey);
+    const jsonElement = elementMap.get(referenceKey);
+    if (!jsonElement) {
+      console.log(`ReferenceDefinitions: Element not found in elementMap: "${referenceKey}"`);
+      return;
+    }
+    const meta = jsonElement.elementMeta;
+    if (!meta) {
+      console.log("ReferenceDefinitions: No metadata found for element");
+      return;
+    }
     const { filePath } = meta;
-    if (!filePath) return;
-    const fileLines = (0, import_fs4.readFileSync)(filePath).toString().split("\n");
-    const startLine = fileLines.findIndex((x) => isStringElement(x, jsonElement.elementName));
-    const startChar = fileLines.find((x) => isStringElement(x, jsonElement.elementName))?.indexOf('"') ?? 0;
-    const startPosition = new import_vscode4.Position(startLine !== -1 ? startLine : 0, startChar);
-    return new import_vscode4.Location(import_vscode4.Uri.file(filePath), startPosition);
+    if (!filePath) {
+      console.log("ReferenceDefinitions: No file path in metadata");
+      return;
+    }
+    if (!(0, import_fs4.existsSync)(filePath)) {
+      console.log("ReferenceDefinitions: File does not exist:", filePath);
+      return;
+    }
+    try {
+      const fileLines = (0, import_fs4.readFileSync)(filePath, "utf8").split("\n");
+      const startLine = fileLines.findIndex((x, lineI) => isStringElement(x, jsonElement.elementName) && lineI != position.line);
+      if (startLine === -1) {
+        console.log("ReferenceDefinitions: Element not found in file lines");
+        return;
+      }
+      const matchingLine = fileLines[startLine];
+      const startChar = matchingLine.indexOf(`"${jsonElement.elementName}"`);
+      if (startChar === -1) {
+        console.log(`ReferenceDefinitions: Could not find start character "${jsonElement.elementName}" in "${matchingLine}"`);
+        return;
+      }
+      const startPosition = new import_vscode4.Position(startLine, startChar);
+      const targetRange = new import_vscode4.Range(
+        startPosition,
+        new import_vscode4.Position(startLine, startChar + jsonElement.elementName.length)
+      );
+      const originSelectionRange = new import_vscode4.Range(
+        new import_vscode4.Position(position.line, atIndex + 1),
+        new import_vscode4.Position(position.line, atIndex + 1 + reference.length)
+      );
+      return [
+        {
+          originSelectionRange,
+          targetUri: import_vscode4.Uri.file(filePath),
+          targetRange
+        }
+      ];
+    } catch (error) {
+      console.error("ReferenceDefinitions: Error reading file:", error);
+      return;
+    }
   }
 });
+console.log("ReferenceDefinitions: Provider registered for document types:", docInfo);
 
 // src/providers/textureCompletionLensProvider.js
 var import_vscode6 = require("vscode");
