@@ -6965,11 +6965,13 @@ var ReferenceCompletionProvider = import_vscode4.languages.registerCompletionIte
       (x) => `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0 && !x.elementName.startsWith("$")
     );
     const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex((y) => y.elementName === x.elementName) === i);
+    const currentNamespace = getCurrentNamespace(document.getText());
     return uniqueSuggestions.map((x) => {
+      const label = `@${x.elementMeta.namespace != currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
       return {
-        label: `@${x.elementMeta.namespace}.${x.elementName}`,
+        label,
         kind: import_vscode4.CompletionItemKind.Variable,
-        insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
+        insertText: label,
         range: new import_vscode4.Range(
           new import_vscode4.Position(position.line, atSymbolIndex),
           position
