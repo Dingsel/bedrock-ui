@@ -37,7 +37,7 @@ export function parseFilePath(filePath) {
  */
 function traverseKeys(key, element, objectMeta, parentElement = undefined) {
     const keyInfo = getKeyInfomation(key)
-    const { elementName, targetNamespace, targetReference } = keyInfo
+    const { elementName } = keyInfo
     const elemId = getElementIdFromKey(keyInfo, objectMeta)
 
     const existingElement = elementMap.get(elemId)
@@ -101,7 +101,7 @@ function getElementIdFromKey(elemKey, meta) {
  * @param {string[]} [controlSegments=[]] 
  * @returns {JSONUIElement | undefined}
  */
-function getReferenceElementByKey({ elementName, targetNamespace, targetReference }, fallbackNamespace, controlSegments = []) {
+function getReferenceElementByKey({ targetNamespace, targetReference }, fallbackNamespace, controlSegments = []) {
     const namespace = targetNamespace ?? fallbackNamespace
 
     if (!targetNamespace && !targetReference) return

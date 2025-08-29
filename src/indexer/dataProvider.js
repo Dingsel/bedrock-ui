@@ -24,7 +24,7 @@ export async function inizialize() {
             } else parseFilePath(fileName)
         }
 
-        elementMap.forEach((element, key) => {
+        elementMap.forEach((element) => {
             totalElementsAutoCompletions.push(element)
         })
 
@@ -54,7 +54,7 @@ export async function inizialize() {
         }
     })
 
-    watcher.onDidDelete((file) => {
+    watcher.onDidDelete(() => {
         elementMap.clear()
         totalElementsAutoCompletions = []
 

@@ -386,7 +386,7 @@ function parseFilePath(filePath) {
 }
 function traverseKeys(key, element, objectMeta, parentElement = void 0) {
   const keyInfo = getKeyInfomation(key);
-  const { elementName, targetNamespace, targetReference } = keyInfo;
+  const { elementName } = keyInfo;
   const elemId = getElementIdFromKey(keyInfo, objectMeta);
   const existingElement = elementMap.get(elemId);
   const jsonUIELement = (
@@ -433,7 +433,7 @@ function getElementIdFromKey(elemKey, meta) {
   }
   return `${elemKey.elementName}@${meta.namespace}`;
 }
-function getReferenceElementByKey({ elementName, targetNamespace, targetReference }, fallbackNamespace, controlSegments = []) {
+function getReferenceElementByKey({ targetNamespace, targetReference }, fallbackNamespace, controlSegments = []) {
   const namespace = targetNamespace ?? fallbackNamespace;
   if (!targetNamespace && !targetReference) return;
   if (!targetNamespace && targetReference && controlSegments.length >= 1) {
@@ -6858,7 +6858,7 @@ async function inizialize() {
         parseGlobalVarsFromFilePath(fileName);
       } else parseFilePath(fileName);
     }
-    elementMap.forEach((element, key) => {
+    elementMap.forEach((element) => {
       totalElementsAutoCompletions.push(element);
     });
     console.log(elementMap);
@@ -6882,7 +6882,7 @@ async function inizialize() {
       initializeFully();
     }
   });
-  watcher.onDidDelete((file) => {
+  watcher.onDidDelete(() => {
     elementMap.clear();
     totalElementsAutoCompletions = [];
     initializeFully();
@@ -7267,7 +7267,7 @@ function useColours() {
         });
       }
     });
-    Object.entries(matches).forEach(([key, arr]) => {
+    Object.entries(matches).forEach(([, arr]) => {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
       oldDecorations.push(arr[0].decoration);
     });

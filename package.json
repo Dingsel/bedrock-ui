@@ -60,10 +60,8 @@
     },
     "scripts": {
         "lint": "eslint .",
-        "pretest": "npm run lint",
         "build": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node",
         "watch": ".\\node_modules\\.bin\\esbuild ./src/extension.js --bundle --outfile=dist/extension.js --external:vscode --sourcemap --platform=node --watch",
-        "test": "vscode-test",
         "package": "vsce package",
         "publish": "vsce publish"
     },

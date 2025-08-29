@@ -81,6 +81,7 @@ export function getTokenColorsForTheme(themeName) {
     const tokenColors = new Map();
     let currentThemePath;
     for (const extension of extensions.all) {
+        /** @type {{label: string, path: string}[]} */
         const themes = extension.packageJSON.contributes && extension.packageJSON.contributes.themes;
         const currentTheme = themes && themes.find((theme) => theme.label === themeName);
         if (currentTheme) {
@@ -93,6 +94,7 @@ export function getTokenColorsForTheme(themeName) {
     while (themePaths.length > 0) {
         const themePath = themePaths.pop();
         if (!themePath) throw new Error("this is to make typescript happy");
+        /** @type {{ include?: string, tokenColors?: { scope: string | string[], settings: { background?: string, fontStyle?: string, foreground?: string } }[]} } */
         const theme = require(themePath);
         if (theme) {
             if (theme.include) {

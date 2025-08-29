@@ -100,7 +100,7 @@ export function useColours() {
                 });
             }
         });
-        Object.entries(matches).forEach(([key, arr]) => {
+        Object.entries(matches).forEach(([, arr]) => {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
             oldDecorations.push(arr[0].decoration);
         })
