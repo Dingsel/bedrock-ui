@@ -18,6 +18,7 @@ Error reporting
 referencedBy on nested elements
 
 ## Atribution
-This project uses JSON UI Schemas from [KalmeMarq](https://github.com/KalmeMarq)
+This project uses JSON UI Schemas from [KalmeMarq](https://github.com/KalmeMarq)\
+Big thanks to all the [contributors](https://github.com/Dingsel/bedrock-ui/graphs/contributors)
 
 **Enjoy!**
