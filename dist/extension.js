@@ -7164,23 +7164,19 @@ function useColours() {
     if (!isProbablyJSONUI(text)) return;
     const syntaxes = [
       {
-        regex: /(?<=)@[^.\s]+(?=\.)/g,
+        regex: /(?<=@)[^.\s]+(?=\.)/g,
         decoration: namespaceDecoration
       },
       {
-        regex: /@[a-zA-Z0-9_]+.([a-zA-Z0-9_]+)/g,
+        regex: /(?<!\$)(?<="|\b)(\w+(\/\w+)*)(?=@|\s*"\s*:\s*\{)/g,
         decoration: elementDecoration
       },
       {
-        regex: /(?<=["\b])([\w\/]+)(?=@|\s*"\s*:\s*\{)/g,
+        regex: /(?<=@[^.\s]+\.)\w+(?=\")/g,
         decoration: elementDecoration
       },
       {
-        regex: /(?<=\.)\w+(?=\":)/g,
-        decoration: elementDecoration
-      },
-      {
-        regex: /(?<=\"namespace\"\s*:\s*)(\"\w+")/g,
+        regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
         decoration: namespaceDecoration
       },
       {
