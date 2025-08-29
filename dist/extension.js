@@ -164,7 +164,7 @@ var require_brace_expansion = __commonJS({
         var isSequence = isNumericSequence || isAlphaSequence;
         var isOptions = m.body.indexOf(",") >= 0;
         if (!isSequence && !isOptions) {
-          if (m.post.match(/,.*\}/)) {
+          if (m.post.match(/,(?!,).*\}/)) {
             str = m.pre + "{" + m.body + escClose + m.post;
             return expand2(str);
           }
@@ -7169,7 +7169,7 @@ var VariableCompletionProvider = import_vscode8.languages.registerCompletionItem
     const anyKeyString = findPatternUpwards();
     if (!anyKeyString) return;
     const keyInfo = getKeyInfomation(anyKeyString);
-    const elementKey = `${keyInfo.elementName}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
+    const elementKey = `${keyInfo.targetReference}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
     const element = elementMap.get(elementKey);
     const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
     const textBeforeCursor = document.getText(new import_vscode8.Range(new import_vscode8.Position(position.line, 0), position));
