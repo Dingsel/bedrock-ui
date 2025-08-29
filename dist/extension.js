@@ -349,24 +349,22 @@ function getTokenColorsForTheme(themeName) {
     const themePath = themePaths.pop();
     if (!themePath) throw new Error("this is to make typescript happy");
     const theme = require(themePath);
-    if (theme) {
-      if (theme.include) {
-        themePaths.push(import_node_path.default.join(import_node_path.default.dirname(themePath), theme.include));
-      }
-      if (theme.tokenColors) {
-        theme.tokenColors.forEach((rule) => {
-          if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
-            tokenColors.set(rule.scope, rule.settings);
-          } else if (rule.scope instanceof Array) {
-            rule.scope.forEach((scope) => {
-              if (!tokenColors.has(rule.scope)) {
-                tokenColors.set(scope, rule.settings);
-              }
-            });
+    if (!theme) continue;
+    if (theme.include) {
+      themePaths.push(import_node_path.default.join(import_node_path.default.dirname(themePath), theme.include));
+    }
+    if (!theme.tokenColors) continue;
+    theme.tokenColors.forEach((rule) => {
+      if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
+        tokenColors.set(rule.scope, rule.settings);
+      } else if (rule.scope instanceof Array) {
+        rule.scope.forEach((scope) => {
+          if (!tokenColors.has(rule.scope)) {
+            tokenColors.set(scope, rule.settings);
           }
         });
       }
-    }
+    });
   }
   return (token) => {
     while (!tokenColors.has(token)) {
@@ -7208,7 +7206,6 @@ function registerProviders(context) {
 
 // src/providers/jsonColorization.js
 var import_vscode9 = require("vscode");
-var oldDecorations = [];
 function useColours() {
   import_vscode9.workspace.onDidOpenTextDocument(() => {
     if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
@@ -7242,10 +7239,6 @@ function useColours() {
     const text = document.getText();
     const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
     if (!isGlobalVariables && !isProbablyJSONUI(text)) return;
-    let oldDecoration;
-    while (oldDecoration = oldDecorations.pop()) {
-      editor.setDecorations(oldDecoration, []);
-    }
     const syntaxes = getSyntaxes(isGlobalVariables);
     const matches = {};
     syntaxes.forEach(({ regex, decoration }) => {
@@ -7264,7 +7257,6 @@ function useColours() {
     });
     Object.entries(matches).forEach(([, arr]) => {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
-      oldDecorations.push(arr[0].decoration);
     });
   }
 }

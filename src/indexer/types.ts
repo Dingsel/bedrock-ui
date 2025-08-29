@@ -4,6 +4,7 @@ interface ElementMeta {
     variables: Variable[]
     controlSegments: string[]
 }
+
 interface Variable {
     name: string
     defaultValue: any

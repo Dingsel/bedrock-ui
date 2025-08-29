@@ -54,6 +54,7 @@ function traverseKeys(key, element, objectMeta, parentElement = undefined) {
         name: key.split("|")[0],
         defaultValue: key.split("|")[1] == "default"? value : undefined
     }));
+    
     const elementMeta = { ...objectMeta, variables }
     jsonUIELement.elementMeta = elementMeta
 

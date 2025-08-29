@@ -111,28 +111,30 @@ export function getTokenColorsForTheme(themeName) {
         if (!themePath) throw new Error("this is to make typescript happy");
         /** @type {{ include?: string, tokenColors?: { scope: string | string[], settings: { background?: string, fontStyle?: string, foreground?: string } }[]} } */
         const theme = require(themePath);
-        if (theme) {
-            if (theme.include) {
-                themePaths.push(path.join(path.dirname(themePath), theme.include));
-            }
-            if (theme.tokenColors) {
-                theme.tokenColors.forEach((rule) => {
-                    if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
-                        tokenColors.set(rule.scope, rule.settings);
-                    } else if (rule.scope instanceof Array) {
-                        rule.scope.forEach((scope) => {
-                            if (!tokenColors.has(rule.scope)) {
-                                tokenColors.set(scope, rule.settings);
-                            }
-                        });
+        if (!theme) continue;
+
+        if (theme.include) {
+            themePaths.push(path.join(path.dirname(themePath), theme.include));
+        }
+
+        if (!theme.tokenColors) continue;
+
+        theme.tokenColors.forEach((rule) => {
+            if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
+                tokenColors.set(rule.scope, rule.settings);
+            } else if (rule.scope instanceof Array) {
+                rule.scope.forEach((scope) => {
+                    if (!tokenColors.has(rule.scope)) {
+                        tokenColors.set(scope, rule.settings);
                     }
                 });
             }
-        }
+        });
     }
+    
     return token => {
-        while(!tokenColors.has(token)) {
-            if(token.includes(".")) {
+        while (!tokenColors.has(token)) {
+            if (token.includes(".")) {
                 token = token.slice(0, token.lastIndexOf("."));
             } else {
                 return undefined;

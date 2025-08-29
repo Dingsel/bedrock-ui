@@ -2,8 +2,8 @@ import { Position, Range, window, workspace } from "vscode";
 import { bindingDecoration, createDecorations, elementDecoration, namespaceDecoration, variableDecoration } from "../global";
 import { isProbablyJSONUI } from "../indexer/utils";
 
-/** @type {TextEditorDecorationType[]} */
-let oldDecorations = [];
+// /** @type {TextEditorDecorationType[]} */
+// let oldDecorations = [];
 
 export function useColours() {
     workspace.onDidOpenTextDocument(() => {
@@ -24,7 +24,7 @@ export function useColours() {
             colorizeJson(editor);
         }
     });
-    
+
     workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('workbench.colorTheme')) {
             createDecorations();
@@ -47,11 +47,11 @@ export function useColours() {
         const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
 
         if (!isGlobalVariables && !isProbablyJSONUI(text)) return
-        
-        let oldDecoration;
-        while (oldDecoration = oldDecorations.pop()) {
-            editor.setDecorations(oldDecoration, []);
-        }
+
+        // let oldDecoration;
+        // while (oldDecoration = oldDecorations.pop()) {
+        //     editor.setDecorations(oldDecoration, []);
+        // }
 
         const syntaxes = getSyntaxes(isGlobalVariables);
 
@@ -65,7 +65,7 @@ export function useColours() {
 
                 const startPos = document.positionAt(regex.lastIndex - m.length);
                 const endPos = document.positionAt(regex.lastIndex);
-                
+
                 if (isInComment(document, document.offsetAt(startPos))) continue;
 
                 matches[decoration.key] ??= []
@@ -78,7 +78,7 @@ export function useColours() {
         });
         Object.entries(matches).forEach(([, arr]) => {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
-            oldDecorations.push(arr[0].decoration);
+            // oldDecorations.push(arr[0].decoration);
         })
     }
 }
@@ -92,7 +92,7 @@ function getSyntaxes(isGlobalVariables) {
         regex: /(\$[\w_|]+)/g,
         decoration: variableDecoration
     }];
-    if(!isGlobalVariables) {
+    if (!isGlobalVariables) {
         syntaxes.push(
             {
                 regex: /(?<=@)[^.\s]+(?=\.)/g,
@@ -110,7 +110,7 @@ function getSyntaxes(isGlobalVariables) {
                 regex: /(?<=\"namespace\"\s*:\s*)(\"[^.\s]+")/g,
                 decoration: namespaceDecoration
             },
-            
+
             {
                 regex: /(#[\w_]+)/g,
                 decoration: bindingDecoration
@@ -135,7 +135,7 @@ function isInComment(document, start) {
         if (charPos >= lineCommentIndex) return true;
     }
     // Check block comment (/* ... */)
-    const beforeMatch = document.getText(new Range(new Position(0,0), document.positionAt(start)));
+    const beforeMatch = document.getText(new Range(new Position(0, 0), document.positionAt(start)));
     const lastBlockStart = beforeMatch.lastIndexOf('/*');
     const lastBlockEnd = beforeMatch.lastIndexOf('*/');
     return lastBlockStart > lastBlockEnd;
