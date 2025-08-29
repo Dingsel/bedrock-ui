@@ -38,42 +38,27 @@ function getReferenceKey(reference, currentNamespace) {
 
 export const ReferenceDefinitionProvider = languages.registerDefinitionProvider(docInfo, {
     provideDefinition(document, position) {
-        console.log("ReferenceDefinitions: Provider called for document:", document.uri.fsPath);
-        console.log("ReferenceDefinitions: Position:", position);
-        
-        if (!isProbablyJSONUI(document.getText())) {
-            console.log("ReferenceDefinitions: Document is not JSON UI");
-            return;
-        }
+        if (!isProbablyJSONUI(document.getText())) return
         
         const lineText = document.lineAt(position.line).text;
-        console.log("ReferenceDefinitions: Processing line:", lineText);
 
         // Check if the cursor is positioned on a reference part (after the @ symbol)
         const cursorChar = position.character;
         const atIndex = lineText.indexOf('@');
         
-        if (atIndex === -1 || cursorChar <= atIndex) {
-            console.log("ReferenceDefinitions: Cursor not positioned on reference part");
-            return;
-        }
+        if (atIndex === -1 || cursorChar <= atIndex) return
         
         // Extract the reference part that the cursor is on
         const afterAt = lineText.substring(atIndex + 1);
         const quoteEndIndex = afterAt.indexOf('"');
-        if (quoteEndIndex === -1) {
-            console.log("ReferenceDefinitions: No closing quote found after @");
-            return;
-        }
+        if (quoteEndIndex === -1) return;
         
         const reference = afterAt.substring(0, quoteEndIndex);
-        console.log("ReferenceDefinitions: Extracted reference:", reference);
 
         // Look for the referenced element in the elementMap
         // The reference should be found directly in the current namespace
         const currentNamespace = getCurrentNamespace(document.getText());
         const referenceKey = getReferenceKey(reference, currentNamespace);
-        console.log("ReferenceDefinitions: Looking for key:", referenceKey);
         
         const jsonElement = elementMap.get(referenceKey);
 
@@ -81,19 +66,16 @@ export const ReferenceDefinitionProvider = languages.registerDefinitionProvider(
             console.log(`ReferenceDefinitions: Element not found in elementMap: "${referenceKey}"`);
             return;
         }
-
         const meta = jsonElement.elementMeta;
         if (!meta) {
             console.log("ReferenceDefinitions: No metadata found for element");
             return;
         }
-
         const { filePath } = meta;
         if (!filePath) {
             console.log("ReferenceDefinitions: No file path in metadata");
             return;
         }
-
         // Check if file exists
         if (!existsSync(filePath)) {
             console.log("ReferenceDefinitions: File does not exist:", filePath);
@@ -142,5 +124,3 @@ export const ReferenceDefinitionProvider = languages.registerDefinitionProvider(
         }
     }
 })
-
-console.log("ReferenceDefinitions: Provider registered for document types:", docInfo);

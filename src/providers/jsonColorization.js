@@ -1,6 +1,9 @@
 import { Position, Range, window, workspace } from "vscode";
-import { bindingDecoration, elementDecoration, namespaceDecoration, variableDecoration } from "../global";
+import { bindingDecoration, createDecorations, elementDecoration, namespaceDecoration, variableDecoration } from "../global";
 import { isProbablyJSONUI } from "../indexer/utils";
+
+/** @type {TextEditorDecorationType[]} */
+let oldDecorations = [];
 
 export function useColours() {
     workspace.onDidOpenTextDocument(() => {
@@ -21,6 +24,15 @@ export function useColours() {
             colorizeJson(editor);
         }
     });
+    
+    workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('workbench.colorTheme')) {
+            createDecorations();
+            if (window.activeTextEditor?.document?.languageId?.includes('json')) {
+                colorizeJson(window.activeTextEditor);
+            }
+        }
+    });
 
     if (window.activeTextEditor && window.activeTextEditor.document.languageId.includes('json')) {
         colorizeJson(window.activeTextEditor);
@@ -34,6 +46,11 @@ export function useColours() {
         const text = document.getText();
 
         if (!isProbablyJSONUI(text)) return
+        
+        let oldDecoration;
+        while (oldDecoration = oldDecorations.pop()) {
+            editor.setDecorations(oldDecoration, []);
+        }
 
         const syntaxes = [
             {
@@ -85,6 +102,7 @@ export function useColours() {
         });
         Object.entries(matches).forEach(([key, arr]) => {
             editor.setDecorations(arr[0].decoration, arr.map(x => x.range));
+            oldDecorations.push(arr[0].decoration);
         })
     }
 }
@@ -109,3 +127,5 @@ function isInComment(document, start) {
     const lastBlockEnd = beforeMatch.lastIndexOf('*/');
     return lastBlockStart > lastBlockEnd;
 }
+
+/** @import { TextEditorDecorationType } from "vscode" */

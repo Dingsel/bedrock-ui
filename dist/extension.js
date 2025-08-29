@@ -247,13 +247,16 @@ __export(extension_exports, {
 module.exports = __toCommonJS(extension_exports);
 
 // src/providers/referenceCompletions.js
-var import_vscode3 = require("vscode");
+var import_vscode4 = require("vscode");
 
 // src/indexer/dataProvider.js
-var import_vscode = require("vscode");
+var import_vscode2 = require("vscode");
 
 // src/indexer/parseFile.js
 var import_fs2 = require("fs");
+
+// src/indexer/utils.js
+var import_vscode = require("vscode");
 
 // src/indexer/glovalVariables.js
 var import_fs = require("fs");
@@ -269,6 +272,7 @@ function parseGlobalVarsFromFilePath(filePath) {
 }
 
 // src/indexer/utils.js
+var import_node_path = __toESM(require("node:path"));
 function removeComments(string) {
   const withoutComments = string.replace(/"(?:\\.|[^"\\])*"|\s*\/\/.*|\/\*[\s\S]*?\*\//g, (match2) => {
     if (match2.startsWith('"')) {
@@ -313,6 +317,55 @@ function getVariableTree(element) {
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
+}
+function getTokenColorsForTheme(themeName) {
+  const tokenColors = /* @__PURE__ */ new Map();
+  let currentThemePath;
+  for (const extension of import_vscode.extensions.all) {
+    const themes = extension.packageJSON.contributes && extension.packageJSON.contributes.themes;
+    const currentTheme = themes && themes.find((theme) => theme.label === themeName);
+    if (currentTheme) {
+      currentThemePath = import_node_path.default.join(extension.extensionPath, currentTheme.path);
+      break;
+    }
+  }
+  const themePaths = [];
+  if (currentThemePath) {
+    themePaths.push(currentThemePath);
+  }
+  while (themePaths.length > 0) {
+    const themePath = themePaths.pop();
+    if (!themePath) throw new Error("this is to make typescript happy");
+    const theme = require(themePath);
+    if (theme) {
+      if (theme.include) {
+        themePaths.push(import_node_path.default.join(import_node_path.default.dirname(themePath), theme.include));
+      }
+      if (theme.tokenColors) {
+        theme.tokenColors.forEach((rule) => {
+          if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
+            tokenColors.set(rule.scope, rule.settings);
+          } else if (rule.scope instanceof Array) {
+            rule.scope.forEach((scope) => {
+              if (!tokenColors.has(rule.scope)) {
+                tokenColors.set(scope, rule.settings);
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+  return (token) => {
+    while (!tokenColors.has(token)) {
+      if (token.includes(".")) {
+        token = token.slice(0, token.lastIndexOf("."));
+      } else {
+        return void 0;
+      }
+    }
+    return tokenColors.get(token);
+  };
 }
 
 // src/indexer/parseFile.js
@@ -1089,11 +1142,11 @@ var qmarksTestNoExtDot = ([$0]) => {
   return (f) => f.length === len && f !== "." && f !== "..";
 };
 var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-var path = {
+var path2 = {
   win32: { sep: "\\" },
   posix: { sep: "/" }
 };
-var sep = defaultPlatform === "win32" ? path.win32.sep : path.posix.sep;
+var sep = defaultPlatform === "win32" ? path2.win32.sep : path2.posix.sep;
 minimatch.sep = sep;
 var GLOBSTAR = Symbol("globstar **");
 minimatch.GLOBSTAR = GLOBSTAR;
@@ -3121,7 +3174,7 @@ var LRUCache = class _LRUCache {
 };
 
 // node_modules/path-scurry/dist/esm/index.js
-var import_node_path = require("node:path");
+var import_node_path2 = require("node:path");
 var import_node_url = require("node:url");
 var import_fs3 = require("fs");
 var actualFS = __toESM(require("node:fs"), 1);
@@ -4270,12 +4323,12 @@ var PathBase = class {
   /**
    * Get the Path object referenced by the string path, resolved from this Path
    */
-  resolve(path2) {
-    if (!path2) {
+  resolve(path3) {
+    if (!path3) {
       return this;
     }
-    const rootPath = this.getRootString(path2);
-    const dir = path2.substring(rootPath.length);
+    const rootPath = this.getRootString(path3);
+    const dir = path3.substring(rootPath.length);
     const dirParts = dir.split(this.splitSep);
     const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
     return result;
@@ -5027,8 +5080,8 @@ var PathWin32 = class _PathWin32 extends PathBase {
   /**
    * @internal
    */
-  getRootString(path2) {
-    return import_node_path.win32.parse(path2).root;
+  getRootString(path3) {
+    return import_node_path2.win32.parse(path3).root;
   }
   /**
    * @internal
@@ -5074,8 +5127,8 @@ var PathPosix = class _PathPosix extends PathBase {
   /**
    * @internal
    */
-  getRootString(path2) {
-    return path2.startsWith("/") ? "/" : "";
+  getRootString(path3) {
+    return path3.startsWith("/") ? "/" : "";
   }
   /**
    * @internal
@@ -5164,11 +5217,11 @@ var PathScurryBase = class {
   /**
    * Get the depth of a provided path, string, or the cwd
    */
-  depth(path2 = this.cwd) {
-    if (typeof path2 === "string") {
-      path2 = this.cwd.resolve(path2);
+  depth(path3 = this.cwd) {
+    if (typeof path3 === "string") {
+      path3 = this.cwd.resolve(path3);
     }
-    return path2.depth();
+    return path3.depth();
   }
   /**
    * Return the cache of child entries.  Exposed so subclasses can create
@@ -5655,9 +5708,9 @@ var PathScurryBase = class {
     process2();
     return results;
   }
-  chdir(path2 = this.cwd) {
+  chdir(path3 = this.cwd) {
     const oldCwd = this.cwd;
-    this.cwd = typeof path2 === "string" ? this.cwd.resolve(path2) : path2;
+    this.cwd = typeof path3 === "string" ? this.cwd.resolve(path3) : path3;
     this.cwd[setAsCwd](oldCwd);
   }
 };
@@ -5668,7 +5721,7 @@ var PathScurryWin32 = class extends PathScurryBase {
   sep = "\\";
   constructor(cwd = process.cwd(), opts = {}) {
     const { nocase = true } = opts;
-    super(cwd, import_node_path.win32, "\\", { ...opts, nocase });
+    super(cwd, import_node_path2.win32, "\\", { ...opts, nocase });
     this.nocase = nocase;
     for (let p = this.cwd; p; p = p.parent) {
       p.nocase = this.nocase;
@@ -5678,7 +5731,7 @@ var PathScurryWin32 = class extends PathScurryBase {
    * @internal
    */
   parseRootPath(dir) {
-    return import_node_path.win32.parse(dir).root.toUpperCase();
+    return import_node_path2.win32.parse(dir).root.toUpperCase();
   }
   /**
    * @internal
@@ -5700,7 +5753,7 @@ var PathScurryPosix = class extends PathScurryBase {
   sep = "/";
   constructor(cwd = process.cwd(), opts = {}) {
     const { nocase = false } = opts;
-    super(cwd, import_node_path.posix, "/", { ...opts, nocase });
+    super(cwd, import_node_path2.posix, "/", { ...opts, nocase });
     this.nocase = nocase;
   }
   /**
@@ -6013,8 +6066,8 @@ var MatchRecord = class {
   }
   // match, absolute, ifdir
   entries() {
-    return [...this.store.entries()].map(([path2, n]) => [
-      path2,
+    return [...this.store.entries()].map(([path3, n]) => [
+      path3,
       !!(n & 2),
       !!(n & 1)
     ]);
@@ -6219,9 +6272,9 @@ var GlobUtil = class {
   signal;
   maxDepth;
   includeChildMatches;
-  constructor(patterns, path2, opts) {
+  constructor(patterns, path3, opts) {
     this.patterns = patterns;
-    this.path = path2;
+    this.path = path3;
     this.opts = opts;
     this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
     this.includeChildMatches = opts.includeChildMatches !== false;
@@ -6240,11 +6293,11 @@ var GlobUtil = class {
       });
     }
   }
-  #ignored(path2) {
-    return this.seen.has(path2) || !!this.#ignore?.ignored?.(path2);
+  #ignored(path3) {
+    return this.seen.has(path3) || !!this.#ignore?.ignored?.(path3);
   }
-  #childrenIgnored(path2) {
-    return !!this.#ignore?.childrenIgnored?.(path2);
+  #childrenIgnored(path3) {
+    return !!this.#ignore?.childrenIgnored?.(path3);
   }
   // backpressure mechanism
   pause() {
@@ -6459,8 +6512,8 @@ var GlobUtil = class {
 };
 var GlobWalker = class extends GlobUtil {
   matches = /* @__PURE__ */ new Set();
-  constructor(patterns, path2, opts) {
-    super(patterns, path2, opts);
+  constructor(patterns, path3, opts) {
+    super(patterns, path3, opts);
   }
   matchEmit(e) {
     this.matches.add(e);
@@ -6497,8 +6550,8 @@ var GlobWalker = class extends GlobUtil {
 };
 var GlobStream = class extends GlobUtil {
   results;
-  constructor(patterns, path2, opts) {
-    super(patterns, path2, opts);
+  constructor(patterns, path3, opts) {
+    super(patterns, path3, opts);
     this.results = new Minipass({
       signal: this.signal,
       objectMode: true
@@ -6795,9 +6848,9 @@ glob.glob = glob;
 var totalElementsAutoCompletions = [];
 async function inizialize() {
   const pattern = `**/ui/**/*.+(json)`;
-  const watcher = import_vscode.workspace.createFileSystemWatcher("**/ui/**");
+  const watcher = import_vscode2.workspace.createFileSystemWatcher("**/ui/**");
   async function initializeFully() {
-    const workspacePath = import_vscode.workspace?.workspaceFolders?.[0]?.uri.fsPath;
+    const workspacePath = import_vscode2.workspace?.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) return console.warn("Not in a workspace");
     for await (const file of glob.globIterate(pattern, { nodir: true, cwd: workspacePath })) {
       const fileName = (0, import_path.join)(workspacePath, file);
@@ -6843,26 +6896,39 @@ async function inizialize() {
 }
 
 // src/global.js
-var import_vscode2 = require("vscode");
-var namespaceDecoration = import_vscode2.window.createTextEditorDecorationType({
-  color: "#44C9B0"
-});
-var elementDecoration = import_vscode2.window.createTextEditorDecorationType({
-  color: "#4FC1FF"
-});
-var variableDecoration = import_vscode2.window.createTextEditorDecorationType({
-  color: "#DCDC9D"
-});
-var bindingDecoration = import_vscode2.window.createTextEditorDecorationType({
-  color: "#C66969"
-});
+var import_vscode3 = require("vscode");
+var namespaceToken = "entity.name.class";
+var elementToken = "variable.other.constant";
+var variableToken = "entity.name.function";
+var bindingToken = "entity.name.operator";
+var namespaceDecoration;
+var elementDecoration;
+var variableDecoration;
+var bindingDecoration;
+createDecorations();
+function createDecorations() {
+  const themeName = import_vscode3.workspace.getConfiguration("workbench").get("colorTheme");
+  const tokenColors = getTokenColorsForTheme(themeName);
+  namespaceDecoration = import_vscode3.window.createTextEditorDecorationType({
+    color: tokenColors(namespaceToken)?.foreground ?? "#4EC9B0"
+  });
+  elementDecoration = import_vscode3.window.createTextEditorDecorationType({
+    color: tokenColors(elementToken)?.foreground ?? "#4FC1FF"
+  });
+  variableDecoration = import_vscode3.window.createTextEditorDecorationType({
+    color: tokenColors(variableToken)?.foreground ?? "#DCDCAA"
+  });
+  bindingDecoration = import_vscode3.window.createTextEditorDecorationType({
+    color: tokenColors(bindingToken)?.foreground ?? "#C586C0"
+  });
+}
 var docInfo = ["json", "jsonc", "json5"];
 
 // src/providers/referenceCompletions.js
-var ReferenceCompletionProvider = import_vscode3.languages.registerCompletionItemProvider(docInfo, {
+var ReferenceCompletionProvider = import_vscode4.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
-    const textBeforeCursor = document.getText(new import_vscode3.Range(new import_vscode3.Position(position.line, 0), position));
+    const textBeforeCursor = document.getText(new import_vscode4.Range(new import_vscode4.Position(position.line, 0), position));
     const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
     if (atSymbolIndex === -1) return [];
     const word = textBeforeCursor.substring(atSymbolIndex + 1, position.character).trim();
@@ -6873,17 +6939,17 @@ var ReferenceCompletionProvider = import_vscode3.languages.registerCompletionIte
     return uniqueSuggestions.map((x) => {
       return {
         label: `@${x.elementMeta.namespace}.${x.elementName}`,
-        kind: import_vscode3.CompletionItemKind.Variable,
+        kind: import_vscode4.CompletionItemKind.Variable,
         insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
-        range: new import_vscode3.Range(
-          new import_vscode3.Position(position.line, atSymbolIndex),
+        range: new import_vscode4.Range(
+          new import_vscode4.Position(position.line, atSymbolIndex),
           position
         )
       };
     });
   }
 }, "@");
-var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemProvider(docInfo, {
+var ControlCompletionProvider = import_vscode4.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
     const textBeforeCursor = document.lineAt(position.line);
@@ -6895,10 +6961,10 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
     return uniqueSuggestions.map((x) => {
       return {
         label: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
-        kind: import_vscode3.CompletionItemKind.Variable,
+        kind: import_vscode4.CompletionItemKind.Variable,
         insertText: `${x.elementMeta.controlSegments.join("/")}/${x.elementName}`,
-        range: new import_vscode3.Range(
-          new import_vscode3.Position(position.line, charIndex + 1),
+        range: new import_vscode4.Range(
+          new import_vscode4.Position(position.line, charIndex + 1),
           position
         )
       };
@@ -6907,7 +6973,7 @@ var ControlCompletionProvider = import_vscode3.languages.registerCompletionItemP
 }, '"');
 
 // src/providers/referenceDefinitions.js
-var import_vscode4 = require("vscode");
+var import_vscode5 = require("vscode");
 var import_fs4 = require("fs");
 function isStringElement(searchString, elementName) {
   const trimmed = searchString.trim();
@@ -6924,33 +6990,19 @@ function getReferenceKey(reference, currentNamespace) {
   }
   return `${reference}@${currentNamespace}`;
 }
-var ReferenceDefinitionProvider = import_vscode4.languages.registerDefinitionProvider(docInfo, {
+var ReferenceDefinitionProvider = import_vscode5.languages.registerDefinitionProvider(docInfo, {
   provideDefinition(document, position) {
-    console.log("ReferenceDefinitions: Provider called for document:", document.uri.fsPath);
-    console.log("ReferenceDefinitions: Position:", position);
-    if (!isProbablyJSONUI(document.getText())) {
-      console.log("ReferenceDefinitions: Document is not JSON UI");
-      return;
-    }
+    if (!isProbablyJSONUI(document.getText())) return;
     const lineText = document.lineAt(position.line).text;
-    console.log("ReferenceDefinitions: Processing line:", lineText);
     const cursorChar = position.character;
     const atIndex = lineText.indexOf("@");
-    if (atIndex === -1 || cursorChar <= atIndex) {
-      console.log("ReferenceDefinitions: Cursor not positioned on reference part");
-      return;
-    }
+    if (atIndex === -1 || cursorChar <= atIndex) return;
     const afterAt = lineText.substring(atIndex + 1);
     const quoteEndIndex = afterAt.indexOf('"');
-    if (quoteEndIndex === -1) {
-      console.log("ReferenceDefinitions: No closing quote found after @");
-      return;
-    }
+    if (quoteEndIndex === -1) return;
     const reference = afterAt.substring(0, quoteEndIndex);
-    console.log("ReferenceDefinitions: Extracted reference:", reference);
     const currentNamespace = getCurrentNamespace(document.getText());
     const referenceKey = getReferenceKey(reference, currentNamespace);
-    console.log("ReferenceDefinitions: Looking for key:", referenceKey);
     const jsonElement = elementMap.get(referenceKey);
     if (!jsonElement) {
       console.log(`ReferenceDefinitions: Element not found in elementMap: "${referenceKey}"`);
@@ -6983,19 +7035,19 @@ var ReferenceDefinitionProvider = import_vscode4.languages.registerDefinitionPro
         console.log(`ReferenceDefinitions: Could not find start character "${jsonElement.elementName}" in "${matchingLine}"`);
         return;
       }
-      const startPosition = new import_vscode4.Position(startLine, startChar);
-      const targetRange = new import_vscode4.Range(
+      const startPosition = new import_vscode5.Position(startLine, startChar);
+      const targetRange = new import_vscode5.Range(
         startPosition,
-        new import_vscode4.Position(startLine, startChar + jsonElement.elementName.length)
+        new import_vscode5.Position(startLine, startChar + jsonElement.elementName.length)
       );
-      const originSelectionRange = new import_vscode4.Range(
-        new import_vscode4.Position(position.line, atIndex + 1),
-        new import_vscode4.Position(position.line, atIndex + 1 + reference.length)
+      const originSelectionRange = new import_vscode5.Range(
+        new import_vscode5.Position(position.line, atIndex + 1),
+        new import_vscode5.Position(position.line, atIndex + 1 + reference.length)
       );
       return [
         {
           originSelectionRange,
-          targetUri: import_vscode4.Uri.file(filePath),
+          targetUri: import_vscode5.Uri.file(filePath),
           targetRange
         }
       ];
@@ -7005,13 +7057,12 @@ var ReferenceDefinitionProvider = import_vscode4.languages.registerDefinitionPro
     }
   }
 });
-console.log("ReferenceDefinitions: Provider registered for document types:", docInfo);
 
 // src/providers/textureCompletionLensProvider.js
-var import_vscode6 = require("vscode");
+var import_vscode7 = require("vscode");
 
 // src/indexer/texureDataProvider.js
-var import_vscode5 = require("vscode");
+var import_vscode6 = require("vscode");
 var textureMap = /* @__PURE__ */ new Map();
 function getFileKey(string) {
   const arr = string.split(".");
@@ -7022,8 +7073,8 @@ function getFileKey(string) {
 }
 async function initializeTextures() {
   const pattern = `**/textures/**/*.{json,jsonc,json5,png,jpg}`;
-  const watcher = import_vscode5.workspace.createFileSystemWatcher("**/textures/**");
-  const workspacePath = import_vscode5.workspace?.workspaceFolders?.[0]?.uri.fsPath;
+  const watcher = import_vscode6.workspace.createFileSystemWatcher("**/textures/**");
+  const workspacePath = import_vscode6.workspace?.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspacePath) return console.warn("Not in a workspace");
   for await (const file of glob.globIterate(pattern, { nodir: true, cwd: workspacePath })) {
     parseTexture(file);
@@ -7043,21 +7094,21 @@ async function initializeTextures() {
     }
   };
 }
-function parseTexture(path2) {
-  const key = getFileKey(path2);
+function parseTexture(path3) {
+  const key = getFileKey(path3);
   const prevData = textureMap.get(key) || {};
-  if (path2.endsWith(".png") || path2.endsWith(".jpg")) {
-    prevData.texturePath = path2;
+  if (path3.endsWith(".png") || path3.endsWith(".jpg")) {
+    prevData.texturePath = path3;
   }
-  if (path2.includes(".json")) {
-    prevData.slicePath = path2;
+  if (path3.includes(".json")) {
+    prevData.slicePath = path3;
   }
   if (!prevData.slicePath && !prevData.texturePath) return;
   textureMap.set(key, prevData);
 }
 
 // src/providers/textureCompletionLensProvider.js
-var TextureDefinitionProvider = import_vscode6.languages.registerCompletionItemProvider(docInfo, {
+var TextureDefinitionProvider = import_vscode7.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     const line = document.lineAt(position.line).text;
     if (!isProbablyJSONUI(document.getText()) || !line.includes("texture")) return;
@@ -7077,9 +7128,9 @@ var TextureDefinitionProvider = import_vscode6.languages.registerCompletionItemP
       sortText: "!!!",
       label: x,
       insertText: x,
-      kind: import_vscode6.CompletionItemKind.EnumMember,
-      range: new import_vscode6.Range(
-        new import_vscode6.Position(position.line, charIndex + 1),
+      kind: import_vscode7.CompletionItemKind.EnumMember,
+      range: new import_vscode7.Range(
+        new import_vscode7.Position(position.line, charIndex + 1),
         position
       )
     }));
@@ -7087,8 +7138,8 @@ var TextureDefinitionProvider = import_vscode6.languages.registerCompletionItemP
 }, '"');
 
 // src/providers/variableCompletions.js
-var import_vscode7 = require("vscode");
-var VariableCompletionProvider = import_vscode7.languages.registerCompletionItemProvider(docInfo, {
+var import_vscode8 = require("vscode");
+var VariableCompletionProvider = import_vscode8.languages.registerCompletionItemProvider(docInfo, {
   provideCompletionItems(document, position) {
     if (!isProbablyJSONUI(document.getText())) return;
     function findPatternUpwards() {
@@ -7109,16 +7160,16 @@ var VariableCompletionProvider = import_vscode7.languages.registerCompletionItem
     const keyInfo = getKeyInfomation(anyKeyString);
     const element = elementMap.get(`${keyInfo.targetReference}@${keyInfo.targetNamespace}`);
     if (!element) return;
-    const textBeforeCursor = document.getText(new import_vscode7.Range(new import_vscode7.Position(position.line, 0), position));
+    const textBeforeCursor = document.getText(new import_vscode8.Range(new import_vscode8.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
-    const range = dollarSignIndex >= 0 ? new import_vscode7.Range(new import_vscode7.Position(position.line, dollarSignIndex), position) : new import_vscode7.Range(position, position);
+    const range = dollarSignIndex >= 0 ? new import_vscode8.Range(new import_vscode8.Position(position.line, dollarSignIndex), position) : new import_vscode8.Range(position, position);
     return [...new Set(getVariableTree(element))].map((x) => ({
       sortText: "!!!",
       label: x,
       insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? x : `"${x}": `,
-      kind: import_vscode7.CompletionItemKind.Variable,
+      kind: import_vscode8.CompletionItemKind.Variable,
       range
     }));
   }
@@ -7137,31 +7188,44 @@ function registerProviders(context) {
 }
 
 // src/providers/jsonColorization.js
-var import_vscode8 = require("vscode");
+var import_vscode9 = require("vscode");
+var oldDecorations = [];
 function useColours() {
-  import_vscode8.workspace.onDidOpenTextDocument(() => {
-    if (import_vscode8.window.activeTextEditor && import_vscode8.window.activeTextEditor.document.languageId.includes("json")) {
-      colorizeJson(import_vscode8.window.activeTextEditor);
+  import_vscode9.workspace.onDidOpenTextDocument(() => {
+    if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
+      colorizeJson(import_vscode9.window.activeTextEditor);
     }
   });
-  import_vscode8.window.onDidChangeActiveTextEditor((editor) => {
+  import_vscode9.window.onDidChangeActiveTextEditor((editor) => {
     if (editor && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
-  import_vscode8.workspace.onDidChangeTextDocument((event) => {
-    const editor = import_vscode8.window.activeTextEditor;
+  import_vscode9.workspace.onDidChangeTextDocument((event) => {
+    const editor = import_vscode9.window.activeTextEditor;
     if (editor && editor.document === event.document && editor.document.languageId.includes("json")) {
       colorizeJson(editor);
     }
   });
-  if (import_vscode8.window.activeTextEditor && import_vscode8.window.activeTextEditor.document.languageId.includes("json")) {
-    colorizeJson(import_vscode8.window.activeTextEditor);
+  import_vscode9.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration("workbench.colorTheme")) {
+      createDecorations();
+      if (import_vscode9.window.activeTextEditor?.document?.languageId?.includes("json")) {
+        colorizeJson(import_vscode9.window.activeTextEditor);
+      }
+    }
+  });
+  if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
+    colorizeJson(import_vscode9.window.activeTextEditor);
   }
   function colorizeJson(editor) {
     const document = editor.document;
     const text = document.getText();
     if (!isProbablyJSONUI(text)) return;
+    let oldDecoration;
+    while (oldDecoration = oldDecorations.pop()) {
+      editor.setDecorations(oldDecoration, []);
+    }
     const syntaxes = [
       {
         regex: /(?<=@)[^.\s]+(?=\.)/g,
@@ -7198,13 +7262,14 @@ function useColours() {
         if (isInComment(document, document.offsetAt(startPos))) continue;
         matches[decoration.key] ??= [];
         matches[decoration.key].push({
-          range: new import_vscode8.Range(startPos, endPos),
+          range: new import_vscode9.Range(startPos, endPos),
           decoration
         });
       }
     });
     Object.entries(matches).forEach(([key, arr]) => {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
+      oldDecorations.push(arr[0].decoration);
     });
   }
 }
@@ -7215,7 +7280,7 @@ function isInComment(document, start) {
     const charPos = document.positionAt(start).character;
     if (charPos >= lineCommentIndex) return true;
   }
-  const beforeMatch = document.getText(new import_vscode8.Range(new import_vscode8.Position(0, 0), document.positionAt(start)));
+  const beforeMatch = document.getText(new import_vscode9.Range(new import_vscode9.Position(0, 0), document.positionAt(start)));
   const lastBlockStart = beforeMatch.lastIndexOf("/*");
   const lastBlockEnd = beforeMatch.lastIndexOf("*/");
   return lastBlockStart > lastBlockEnd;

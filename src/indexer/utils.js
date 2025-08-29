@@ -1,4 +1,6 @@
+import { extensions } from "vscode";
 import { globalVariables } from "./glovalVariables";
+import path from "node:path";
 
 /**
  * @param {string} string
@@ -69,4 +71,56 @@ export function getVariableTree(element) {
 //Do it better yourself smh
 export function isProbablyJSONUI(fileContent) {
     return fileContent.includes("\"namespace\":")
+}
+
+/**
+ * @param {string} themeName
+ * @returns {(token: string) => { background?: string, fontStyle?: string, foreground?: string }}
+ */
+export function getTokenColorsForTheme(themeName) {
+    const tokenColors = new Map();
+    let currentThemePath;
+    for (const extension of extensions.all) {
+        const themes = extension.packageJSON.contributes && extension.packageJSON.contributes.themes;
+        const currentTheme = themes && themes.find((theme) => theme.label === themeName);
+        if (currentTheme) {
+            currentThemePath = path.join(extension.extensionPath, currentTheme.path);
+            break;
+        }
+    }
+    const themePaths = [];
+    if (currentThemePath) { themePaths.push(currentThemePath); }
+    while (themePaths.length > 0) {
+        const themePath = themePaths.pop();
+        if (!themePath) throw new Error("this is to make typescript happy");
+        const theme = require(themePath);
+        if (theme) {
+            if (theme.include) {
+                themePaths.push(path.join(path.dirname(themePath), theme.include));
+            }
+            if (theme.tokenColors) {
+                theme.tokenColors.forEach((rule) => {
+                    if (typeof rule.scope === "string" && !tokenColors.has(rule.scope)) {
+                        tokenColors.set(rule.scope, rule.settings);
+                    } else if (rule.scope instanceof Array) {
+                        rule.scope.forEach((scope) => {
+                            if (!tokenColors.has(rule.scope)) {
+                                tokenColors.set(scope, rule.settings);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
+    return token => {
+        while(!tokenColors.has(token)) {
+            if(token.includes(".")) {
+                token = token.slice(0, token.lastIndexOf("."));
+            } else {
+                return undefined;
+            }
+        }
+        return tokenColors.get(token);
+    };
 }
