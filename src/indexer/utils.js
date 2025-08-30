@@ -56,14 +56,38 @@ export function getKeyInfomation(key) {
 export function getVariableTree(element) {
     /**@type {JSONUIElement | undefined} */
     let currentElement = element
-    let arr = [];
 
-    do {
-        arr.push(...currentElement.elementMeta.variables)
+    /** @type {Map<string, Variable>} */
+    const variableMap = new Map();
+
+    while (currentElement) {
+        for (let newVar of currentElement.elementMeta.variables) {
+            const existing = variableMap.get(newVar.name);
+
+            if (existing) {
+                existing.overridesAncestors ??= [];
+                existing.overridesAncestors.push(currentElement.elementName);
+                continue
+            }
+
+            variableMap.set(newVar.name, newVar);
+        }
+
         currentElement = currentElement.referencingElement
-    } while (currentElement)
+    }
 
-    return arr.concat(globalVariables)
+    for (const globalVar of globalVariables) {
+        const existing = variableMap.get(globalVar.name);
+
+        if (existing) {
+            existing.overridesGlobal = true;
+            continue
+        }
+
+        variableMap.set(globalVar.name, globalVar);
+    }
+    
+    return Array.from(variableMap.values());
 }
 
 /**
@@ -131,7 +155,7 @@ export function getTokenColorsForTheme(themeName) {
             }
         });
     }
-    
+
     return token => {
         while (!tokenColors.has(token)) {
             if (token.includes(".")) {

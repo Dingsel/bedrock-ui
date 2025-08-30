@@ -32,7 +32,7 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
         // console.log("VariableCompletionProvider: Found element key:", elementKey);
         const element = elementMap.get(elementKey);
         // console.log("VariableCompletionProvider: Found element:", element, [...elementMap.entries()]);
-        const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
+        const variables = element ? getVariableTree(element) : globalVariables;
 
         const textBeforeCursor = document.getText(new Range(new Position(position.line, 0), position));
         const dollarSignIndex = textBeforeCursor.lastIndexOf('$');
@@ -44,16 +44,21 @@ export const VariableCompletionProvider = languages.registerCompletionItemProvid
             : new Range(position, position);
 
 
-        //Maybe mark duplicate variables? (Like if they are global)
-        return variables.map(({ name, defaultValue, isGlobal }) => {
-            let documentation;
+        return variables.map(({ name, defaultValue, isGlobal, overridesGlobal, overridesAncestors }) => {
+            let documentation = "";
             if (defaultValue != undefined) {
                 documentation = `${isGlobal ? "Global variable" : "Default"}: \`${typeof defaultValue == "string" ? `"${defaultValue}"` : defaultValue}\``;
             }
+            if (overridesGlobal) {
+                documentation += "\n\n*This variable overrides a global variable with the same name.*";
+            }
+            overridesAncestors?.forEach((ancestor) => {
+                documentation += `\n\n*This variable overrides one with the same name in \`${ancestor}\`*.`;
+            });
             return {
                 sortText: "!!!",
                 label: name,
-                documentation: documentation && new MarkdownString(documentation),
+                documentation: documentation ? new MarkdownString(documentation) : undefined,
                 insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? name : `"${name}": `,
                 kind: CompletionItemKind.Variable,
                 range

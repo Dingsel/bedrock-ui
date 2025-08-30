@@ -1,7 +1,7 @@
 import { CompletionItemKind, languages, Position, Range } from "vscode";
 import { totalElementsAutoCompletions } from "../indexer/dataProvider";
 import { docInfo } from "../global";
-import { isProbablyJSONUI } from "../indexer/utils";
+import { getCurrentNamespace, isProbablyJSONUI } from "../indexer/utils";
 
 export const ReferenceCompletionProvider = languages.registerCompletionItemProvider(docInfo, {
     provideCompletionItems(document, position) {
@@ -20,11 +20,14 @@ export const ReferenceCompletionProvider = languages.registerCompletionItemProvi
 
         const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex(y => y.elementName === x.elementName) === i);
 
+        const currentNamespace = getCurrentNamespace(document.getText());
+
         return uniqueSuggestions.map(x => {
+            const label = `@${x.elementMeta.namespace !== currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
             return {
-                label: `@${x.elementMeta.namespace}.${x.elementName}`,
+                label,
                 kind: CompletionItemKind.Variable,
-                insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
+                insertText: label,
                 range: new Range(
                     new Position(position.line, atSymbolIndex),
                     position

@@ -1,19 +1,20 @@
-# bedrock-ui 
-Bedrock UI is a tool to make it easier to develop JSON UI files for the Minecraft Bedrock Edition
+# Bedrock UI
+Bedrock UI is a VSCode extension to make it easier to develop JSON UI files for Minecraft Bedrock Edition.
+
+### [Install from the VSCode Marketplace!](https://marketplace.visualstudio.com/items?itemName=Dingsel.bedrock-ui)
 
 ## Features
-Goto references using f12 or ctrl click
-Variables autocompletions
-Additional highlighting of special string sequences
+- Goto references using F12 or ctrl click
+- Autocompletion for variables and control names
+- Syntax highlighting
 
 ## Requirements
-The ui files need to be in a /ui/ folder which should also be in your current workspace
+The ui files need to be in a /ui/ folder which should also be in your current workspace.
 
 ## Known Issues
 Trying to autocomplete variables sometimes makes the suggestion appear at the bottom
 
 ## TODO
-Gloal Variables
 Error reporting
 referencedBy on nested elements
 

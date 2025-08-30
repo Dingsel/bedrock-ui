@@ -312,12 +312,28 @@ function getKeyInfomation(key) {
 }
 function getVariableTree(element) {
   let currentElement = element;
-  let arr = [];
-  do {
-    arr.push(...currentElement.elementMeta.variables);
+  const variableMap = /* @__PURE__ */ new Map();
+  while (currentElement) {
+    for (let newVar of currentElement.elementMeta.variables) {
+      const existing = variableMap.get(newVar.name);
+      if (existing) {
+        existing.overridesAncestors ??= [];
+        existing.overridesAncestors.push(currentElement.elementName);
+        continue;
+      }
+      variableMap.set(newVar.name, newVar);
+    }
     currentElement = currentElement.referencingElement;
-  } while (currentElement);
-  return arr.concat(globalVariables);
+  }
+  for (const globalVar of globalVariables) {
+    const existing = variableMap.get(globalVar.name);
+    if (existing) {
+      existing.overridesGlobal = true;
+      continue;
+    }
+    variableMap.set(globalVar.name, globalVar);
+  }
+  return Array.from(variableMap.values());
 }
 function isProbablyJSONUI(fileContent) {
   return fileContent.includes('"namespace":');
@@ -6949,11 +6965,13 @@ var ReferenceCompletionProvider = import_vscode4.languages.registerCompletionIte
       (x) => `${x.elementMeta.namespace}.${x.elementName}`.includes(word) && x.elementMeta.controlSegments.length <= 0 && !x.elementName.startsWith("$")
     );
     const uniqueSuggestions = filteredSuggestions.filter((x, i, a) => a.findIndex((y) => y.elementName === x.elementName) === i);
+    const currentNamespace = getCurrentNamespace(document.getText());
     return uniqueSuggestions.map((x) => {
+      const label = `@${x.elementMeta.namespace !== currentNamespace ? `${x.elementMeta.namespace}.` : ""}${x.elementName}`;
       return {
-        label: `@${x.elementMeta.namespace}.${x.elementName}`,
+        label,
         kind: import_vscode4.CompletionItemKind.Variable,
-        insertText: `@${x.elementMeta.namespace}.${x.elementName}`,
+        insertText: label,
         range: new import_vscode4.Range(
           new import_vscode4.Position(position.line, atSymbolIndex),
           position
@@ -7169,21 +7187,29 @@ var VariableCompletionProvider = import_vscode8.languages.registerCompletionItem
     const keyInfo = getKeyInfomation(anyKeyString);
     const elementKey = `${keyInfo.targetReference}@${keyInfo.targetNamespace ?? getCurrentNamespace(document.getText())}`;
     const element = elementMap.get(elementKey);
-    const variables = element ? [...new Set(getVariableTree(element))] : globalVariables;
+    const variables = element ? getVariableTree(element) : globalVariables;
     const textBeforeCursor = document.getText(new import_vscode8.Range(new import_vscode8.Position(position.line, 0), position));
     const dollarSignIndex = textBeforeCursor.lastIndexOf("$");
     const unclosedQuoteIndex = textBeforeCursor.lastIndexOf('"');
     const hasUnclosedQuote = unclosedQuoteIndex > dollarSignIndex && !textBeforeCursor.slice(unclosedQuoteIndex + 1).includes('"');
     const range = dollarSignIndex >= 0 ? new import_vscode8.Range(new import_vscode8.Position(position.line, dollarSignIndex), position) : new import_vscode8.Range(position, position);
-    return variables.map(({ name, defaultValue, isGlobal }) => {
-      let documentation;
+    return variables.map(({ name, defaultValue, isGlobal, overridesGlobal, overridesAncestors }) => {
+      let documentation = "";
       if (defaultValue != void 0) {
         documentation = `${isGlobal ? "Global variable" : "Default"}: \`${typeof defaultValue == "string" ? `"${defaultValue}"` : defaultValue}\``;
       }
+      if (overridesGlobal) {
+        documentation += "\n\n*This variable overrides a global variable with the same name.*";
+      }
+      overridesAncestors?.forEach((ancestor) => {
+        documentation += `
+
+*This variable overrides one with the same name in \`${ancestor}\`*.`;
+      });
       return {
         sortText: "!!!",
         label: name,
-        documentation: documentation && new import_vscode8.MarkdownString(documentation),
+        documentation: documentation ? new import_vscode8.MarkdownString(documentation) : void 0,
         insertText: dollarSignIndex >= 0 || hasUnclosedQuote ? name : `"${name}": `,
         kind: import_vscode8.CompletionItemKind.Variable,
         range
@@ -7206,6 +7232,7 @@ function registerProviders(context) {
 
 // src/providers/jsonColorization.js
 var import_vscode9 = require("vscode");
+var oldDecorations = [];
 function useColours() {
   import_vscode9.workspace.onDidOpenTextDocument(() => {
     if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
@@ -7227,14 +7254,14 @@ function useColours() {
     if (event.affectsConfiguration("workbench.colorTheme")) {
       createDecorations();
       if (import_vscode9.window.activeTextEditor?.document?.languageId?.includes("json")) {
-        colorizeJson(import_vscode9.window.activeTextEditor);
+        colorizeJson(import_vscode9.window.activeTextEditor, true);
       }
     }
   });
   if (import_vscode9.window.activeTextEditor && import_vscode9.window.activeTextEditor.document.languageId.includes("json")) {
     colorizeJson(import_vscode9.window.activeTextEditor);
   }
-  function colorizeJson(editor) {
+  function colorizeJson(editor, removeOldDecorations = false) {
     const document = editor.document;
     const text = document.getText();
     const isGlobalVariables = document.fileName.endsWith("_global_variables.json");
@@ -7255,8 +7282,17 @@ function useColours() {
         });
       }
     });
+    if (removeOldDecorations) {
+      let oldDecoration;
+      while (oldDecoration = oldDecorations.pop()) {
+        editor.setDecorations(oldDecoration, []);
+      }
+    } else {
+      oldDecorations = [];
+    }
     Object.entries(matches).forEach(([, arr]) => {
       editor.setDecorations(arr[0].decoration, arr.map((x) => x.range));
+      oldDecorations.push(arr[0].decoration);
     });
   }
 }
