@@ -7057,7 +7057,7 @@ var ReferenceDefinitionProvider = import_vscode5.languages.registerDefinitionPro
         return;
       }
       const matchingLine = fileLines[startLine];
-      const startChar = matchingLine.indexOf(`"${jsonElement.elementName}"`);
+      const startChar = matchingLine.indexOf(`"${jsonElement.elementName}`);
       if (startChar === -1) {
         console.log(`ReferenceDefinitions: Could not find start character "${jsonElement.elementName}" in "${matchingLine}"`);
         return;

@@ -83,8 +83,8 @@ export const ReferenceDefinitionProvider = languages.registerDefinitionProvider(
             }
 
             const matchingLine = fileLines[startLine];
-            const startChar = matchingLine.indexOf(`"${jsonElement.elementName}"`);
-            
+            const startChar = matchingLine.indexOf(`"${jsonElement.elementName}`); // Only look for opening quote
+
             if (startChar === -1) {
                 console.log(`ReferenceDefinitions: Could not find start character "${jsonElement.elementName}" in "${matchingLine}"`);
                 return;
